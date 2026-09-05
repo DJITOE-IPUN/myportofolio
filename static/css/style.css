@@ -101,6 +101,90 @@ h1, .brand {
     margin-bottom: 1.5rem;
 }
 
+
+.section-title {
+    font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    font-size: 2rem;
+    color: var(--ink);
+}
+
+.section-title::after {
+    content: "";
+    display: block;
+    width: 3rem;
+    height: 3px;
+    background-color: var(--accent);
+    margin-top: 0.4rem;
+    border-radius: var(--radius);
+}
+
+.experiences {
+    padding: 3rem 0 5rem;
+    border-top: 1px solid var(--line);
+}
+
+.experience-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.experience-card {
+    background-color: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.5em;;
+}
+
+.experience-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.experience-role {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 1.25rem;
+    color: var(--ink);
+}
+
+.experience-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.experience-org {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    margin-bottom: 1rem;
+}
+
+.experience-location {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.experience-desc {
+    font-size: 0.95rem;
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+}
+
+.experience-details {
+    padding-left: 1.25rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.experience-details li {
+    margin-bottom: 0.4rem;
+}
+
 .meta-list {
     display: flex;
     gap: 2rem;
