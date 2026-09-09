@@ -23,3 +23,21 @@ def show_experience(request):
         "experience_list": Experience.objects.all(),
     }
     return render(request, "experience.html", context)
+
+
+def show_education(request):
+    education_list = Education.objects.all()
+    context = {
+        'name': 'Michael Evan',
+        'education_list': education_list,
+    }
+    return render(request, "education.html", context)
+
+
+def show_awards(request):
+    award_list = Award.objects.all()
+    context = {
+        'name': 'Michael Evan',
+        'award_list': award_list,
+    }
+    return render(request, "awards.html", context)
