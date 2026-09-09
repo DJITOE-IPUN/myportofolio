@@ -301,6 +301,13 @@ h1, h2, h3, .brand {
     text-align: center;
 }
 
+.empty-state {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 /* Responsive Mobile Layout */
 @media (max-width: 600px) {
     .hero-grid {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experience - {{ name }}</title>
+    <title>Honors & Awards - {{ name }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -23,30 +23,28 @@
     </header>
 
     <main>
-        <section class="experiences" id="experience">
+        <section class="experiences" id="awards">
             <div class="container">
-                <h2 class="section-title">Experience</h2>
+                <h2 class="section-title">Honors & Awards</h2>
 
                 <div class="experience-list">
-                    {% for experience in experience_list %}
+                    {% for award in award_list %}
                         <article class="experience-card">
                             <div class="experience-header">
-                                <h3 class="experience-role">{{ experience.title }}</h3>
-                                <span class="experience-date">{{ experience.date_range }}</span>
+                                <h3 class="experience-role">{{ award.title }}</h3>
+                                <span class="experience-date">{{ award.date_awarded }}</span>
                             </div>
                             <p class="experience-org">
-                                {{ experience.organization }} &middot; 
-                                <span class="experience-location">{{ experience.location }}</span> &middot; 
-                                <span class="experience-location">{{ experience.get_category_display }}</span>
+                                {{ award.issuer }} &middot; 
+                                <span class="experience-location">{{ award.get_category_display }}</span>
                             </p>
-
-                            {% if experience.description %}
-                                <p class="experience-desc">{{ experience.description }}</p>
+                            {% if award.description %}
+                                <p class="experience-desc">{{ award.description }}</p>
                             {% endif %}
                         </article>
                     {% empty %}
                         <article class="experience-card">
-                            <p class="empty-state">Belum ada pengalaman yang ditambahkan.</p>
+                            <p class="empty-state">Belum ada penghargaan yang ditambahkan.</p>
                         </article>
                     {% endfor %}
                 </div>
