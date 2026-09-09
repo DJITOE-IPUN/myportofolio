@@ -11,16 +11,13 @@ class Experience(models.Model):
         ('freelance', 'Freelance'),
     ]
     
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
-    description = models.TextField()
-    category = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, default='full-time')
-    thumbnail = models.URLField(blank=True, null=True)
-    started_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(blank=True, null=True)
+    organization = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, default="Depok, West Java")
+    date_range = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, choices=EXPERIENCE_CHOICES, default='ORGANIZATION')
+    description = models.TextField(blank=True, null=True)
+    is_ongoing = models.BooleanField(default=False)
+
     def __str__(self):
-        return self.title
-    
-    @property
-    def is_ongoing(self):
-        return self.ended_at is None
+        return f"{self.title} - {self.organization}"
