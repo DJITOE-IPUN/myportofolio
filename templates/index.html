@@ -1,15 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ name }} - Portofolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
 {% extends 'base.html' %}
+
+{% block meta %}
+    <title>Profile - {{ name }}</title>
+{% endblock meta %}
+
 {% block content %}
     <main>
         <section class="hero" id="profile">
@@ -35,8 +29,8 @@
                         </div>
                     </dl>
                     <div class="social-links">
-                        <a href="https://github.com/DJITOE-IPUN" class="social-link">GitHub</a>
-                        <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" class="social-link">LinkedIn</a>
+                        <a href="https://github.com/DJITOE-IPUN" class="social-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+                        <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" class="social-link" target="_blank" rel="noopener noreferrer">LinkedIn</a>
                         <a href="mailto:michaelevanpn@gmail.com" class="social-link">Email</a>
                     </div>
                 </div>
@@ -44,4 +38,3 @@
         </section>
     </main>
 {% endblock content %}
-</html>
