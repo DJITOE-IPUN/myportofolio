@@ -1,55 +1,59 @@
 from django.forms import ModelForm, TextInput, Textarea, URLInput
+from main.models import Education, Project, Award, Experience
 
-from main.models import Education, Project
 
-# class EducationForm(ModelForm):
-#     class Meta:
-#         model = Education
-#         fields = [
-#             "institution",
-#             "degree",
-#             "field_of_study",
-#             "date_range",
-#             "description",
-#         ]
+class EducationForm(ModelForm):
+    class Meta:
+        model = Education
+        fields = [
+            "institution",
+            "degree",
+            "field_of_study",
+            "date_range",
+            "description",
+        ]
 
-#         labels = {
-#             "institution": "Educational Institution",
-#             "degree": "Education Level",
-#             "field_of_study": "Field of Study",
-#             "date_range": "Study Period",
-#             "description": "Description",
-#         }
+        labels = {
+            "institution": "Institusi Pendidikan",
+            "degree": "Jenjang Pendidikan",
+            "field_of_study": "Program Studi / Jurusan",
+            "date_range": "Masa Studi",
+            "description": "Deskripsi",
+        }
 
-#         widgets = {
-#             "institution": TextInput(
-#                 attrs={
-#                     "placeholder": "School, University, Academy, etc",
-#                     "maxlength": 255,
-#                 }
-#             ),
-#             "degree": Textarea(
-#                 attrs={
-#                     "placeholder": "Undergraduate, Diploma, Bachelor, etc",
-#                     "rows": 3,
-#                 }
-#             ),
-#             "field_of_study": TextInput(
-#                 attrs={
-#                     "placeholder": "Study Program",
-#                 }
-#             ),
-#             "date-range": URLInput(
-#                 attrs={
-#                     "placeholder": "(year)-(year)",
-#                 }
-#             ),
-#             "description": URLInput(
-#                 attrs={
-#                     "placeholder": "Describe your educational institute and/or your activities in there",
-#                 }
-#             ),
-#         }
+        widgets = {
+            "institution": TextInput(
+                attrs={
+                    "placeholder": "Universitas Indonesia, SMA Taruna Nusantara, dll.",
+                    "maxlength": 255,
+                }
+            ),
+            "degree": TextInput(
+                attrs={
+                    "placeholder": "S1 / Sarjana, High School Diploma, dll.",
+                    "maxlength": 255,
+                }
+            ),
+            "field_of_study": TextInput(
+                attrs={
+                    "placeholder": "Ilmu Komputer, MIPA, dll.",
+                    "maxlength": 255,
+                }
+            ),
+            "date_range": TextInput(
+                attrs={
+                    "placeholder": "2025 - Present, 2022 - 2025",
+                    "maxlength": 100,
+                }
+            ),
+            "description": Textarea(
+                attrs={
+                    "placeholder": "Ceritakan pencapaian atau aktivitas selama masa studi...",
+                    "rows": 3,
+                }
+            ),
+        }
+
 
 class ProjectForm(ModelForm):
     class Meta:
@@ -90,12 +94,57 @@ class ProjectForm(ModelForm):
             ),
             "project_url": URLInput(
                 attrs={
-                    "placeholder": "https://github.com/kakBurhan/burhanquestv4",
+                    "placeholder": "https://github.com/username/project",
                 }
             ),
             "project_image_url": URLInput(
                 attrs={
-                    "placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000",
+                    "placeholder": "https://example.com/image.png",
+                }
+            ),
+        }
+
+
+class AwardForm(ModelForm):
+    class Meta:
+        model = Award
+        fields = [
+            "title",
+            "issuer",
+            "date_awarded",
+            "description",
+        ]
+
+        labels = {
+            "title": "Nama Penghargaan",
+            "issuer": "Penyelenggara / Pemberi",
+            "date_awarded": "Tahun / Tanggal Penerimaan",
+            "description": "Deskripsi Prestasi",
+        }
+
+        widgets = {
+            "title": TextInput(
+                attrs={
+                    "placeholder": "Juara 1 Hackathon / Best Paper Award",
+                    "maxlength": 255,
+                }
+            ),
+            "issuer": TextInput(
+                attrs={
+                    "placeholder": "Fasilkom UI / Kementerian Kominfo",
+                    "maxlength": 255,
+                }
+            ),
+            "date_awarded": TextInput(
+                attrs={
+                    "placeholder": "2026",
+                    "maxlength": 100,
+                }
+            ),
+            "description": Textarea(
+                attrs={
+                    "placeholder": "Deskripsikan detail pencapaian atau kategori lomba...",
+                    "rows": 3,
                 }
             ),
         }
