@@ -108,18 +108,21 @@ def edit_award(request, id):
 
 # --- DELETE VIEWS ---
 def delete_education(request, id):
-    edu = get_object_or_404(Education, pk=id)
-    edu.delete()
+    if request.method == "POST":
+        edu = get_object_or_404(Education, pk=id)
+        edu.delete()
     return redirect('main:show_education')
 
 def delete_project(request, id):
-    project = get_object_or_404(Project, pk=id)
-    project.delete()
+    if request.method == "POST":
+        project = get_object_or_404(Project, pk=id)
+        project.delete()
     return redirect('main:show_projects')
 
 def delete_award(request, id):
-    award = get_object_or_404(Award, pk=id)
-    award.delete()
+    if request.method == "POST":
+        award = get_object_or_404(Award, pk=id)
+        award.delete()
     return redirect('main:show_awards')
 
 

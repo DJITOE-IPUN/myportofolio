@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block meta %}
     <title>Projects - {{ name }}</title>
@@ -6,7 +6,7 @@
 
 {% block content %}
     <main>
-        <section class="experience-section" id="experience">
+        <section class="experience-section" id="projects">
             <div class="container">
                 <p class="section-kicker">Karya yang saya bangun</p>
                 <div class="project-header">
@@ -40,10 +40,11 @@
                             <span class="experience-category">{{ project.tech_stack }}</span>
                             <p class="experience-description">{{ project.description }}</p>
                             <div class="project-card-actions">
-                                <div class="project-actions">
+                                <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     {% if project.project_url %}
-                                        <a href="{{ project.project_url }}" class="button">Lihat Project</a>
+                                        <a href="{{ project.project_url }}" class="button" target="_blank" rel="noopener">Lihat Project</a>
                                     {% endif %}
+                                    <a href="{% url 'main:edit_project' project.id %}" class="button button-secondary">Ubah</a>
                                     {% include "components/project_delete_modal.html" with project=project %}
                                 </div>
                             </div>

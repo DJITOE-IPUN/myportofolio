@@ -8,7 +8,13 @@
     <main>
         <section class="experiences" id="awards">
             <div class="container">
-                <h2 class="section-title">Honors & Awards</h2>
+                <div class="project-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 class="section-title" style="margin-bottom: 0;">Honors & Awards</h2>
+                    <a href="{% url 'main:create_award' %}" class="button project-add-button">
+                        <span aria-hidden="true">+</span>
+                        Tambah Penghargaan
+                    </a>
+                </div>
 
                 <div class="experience-list">
                     {% for award in award_list %}
@@ -24,6 +30,13 @@
                             {% if award.description %}
                                 <p class="experience-desc">{{ award.description }}</p>
                             {% endif %}
+
+                            <div class="project-card-actions" style="margin-top: 1rem;">
+                                <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <a href="{% url 'main:edit_award' award.id %}" class="button button-secondary">Ubah</a>
+                                    {% include "components/award_delete_modal.html" with award=award %}
+                                </div>
+                            </div>
                         </article>
                     {% empty %}
                         <article class="experience-card">

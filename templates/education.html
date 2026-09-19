@@ -8,7 +8,13 @@
     <main>
         <section class="experiences" id="education">
             <div class="container">
-                <h2 class="section-title">Education</h2>
+                <div class="project-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 class="section-title" style="margin-bottom: 0;">Education</h2>
+                    <a href="{% url 'main:create_education' %}" class="button project-add-button">
+                        <span aria-hidden="true">+</span>
+                        Tambah Pendidikan
+                    </a>
+                </div>
 
                 <div class="experience-list">
                     {% for edu in education_list %}
@@ -24,6 +30,13 @@
                             {% if edu.description %}
                                 <p class="experience-desc">{{ edu.description }}</p>
                             {% endif %}
+
+                            <div class="project-card-actions" style="margin-top: 1rem;">
+                                <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <a href="{% url 'main:edit_education' edu.id %}" class="button button-secondary">Ubah</a>
+                                    {% include "components/education_delete_modal.html" with edu=edu %}
+                                </div>
+                            </div>
                         </article>
                     {% empty %}
                         <article class="experience-card">
