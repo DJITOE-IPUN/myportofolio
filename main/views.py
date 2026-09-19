@@ -51,27 +51,21 @@ def create_education(request):
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_education')
-    
-    context = {'form': form, 'title': 'Tambah Riwayat Pendidikan'}
-    return render(request, "form.html", context)
+    return render(request, "education_form.html", {'form': form, 'title': 'Tambah Riwayat Pendidikan'})
 
 def create_project(request):
     form = ProjectForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_projects')
-    
-    context = {'form': form, 'title': 'Tambah Proyek'}
-    return render(request, "form.html", context)
+    return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
 
 def create_award(request):
     form = AwardForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')
-    
-    context = {'form': form, 'title': 'Tambah Penghargaan'}
-    return render(request, "form.html", context)
+    return render(request, "awards_form.html", {'form': form, 'title': 'Tambah Penghargaan'})
 
 
 # --- EDIT / UPDATE VIEWS ---
@@ -81,9 +75,7 @@ def edit_education(request, id):
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_education')
-    
-    context = {'form': form, 'title': 'Ubah Riwayat Pendidikan'}
-    return render(request, "form.html", context)
+    return render(request, "education_form.html", {'form': form, 'title': 'Ubah Riwayat Pendidikan'})
 
 def edit_project(request, id):
     project = get_object_or_404(Project, pk=id)
@@ -91,9 +83,7 @@ def edit_project(request, id):
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_projects')
-    
-    context = {'form': form, 'title': 'Ubah Proyek'}
-    return render(request, "form.html", context)
+    return render(request, "projects_form.html", {'form': form, 'title': 'Ubah Proyek'})
 
 def edit_award(request, id):
     award = get_object_or_404(Award, pk=id)
@@ -101,9 +91,7 @@ def edit_award(request, id):
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')
-    
-    context = {'form': form, 'title': 'Ubah Penghargaan'}
-    return render(request, "form.html", context)
+    return render(request, "awards_form.html", {'form': form, 'title': 'Ubah Penghargaan'})
 
 
 # --- DELETE VIEWS ---

@@ -8,7 +8,7 @@
     <main>
         <section class="experience-section">
             <div class="container" style="max-width: 600px;">
-                <h1>{{ title|default:"Form Proyek" }}</h1>
+                <h1>{{ title|default:"Form Penghargaan" }}</h1>
                 <form method="post" class="project-form">
                     {% csrf_token %}
                     {% for field in form %}
@@ -22,7 +22,7 @@
                     {% endfor %}
                     <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
                         <button type="submit" class="button">Simpan</button>
-                        <a href="{% url 'main:show_projects' %}" class="button button-secondary">Batal</a>
+                        <a href="{% url 'main:show_awards' %}" class="button button-secondary">Batal</a>
                     </div>
                 </form>
             </div>
