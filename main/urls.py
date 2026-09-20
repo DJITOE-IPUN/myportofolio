@@ -12,6 +12,7 @@ app_name = 'main'
 urlpatterns = [
     # Main Views
     path('', show_main, name='show_main'),
+    path('experience/', show_experience, name='show_experience'),
     path('education/', show_education, name='show_education'),
     path('awards/', show_awards, name='show_awards'),
     path('projects/', show_projects, name='show_projects'),

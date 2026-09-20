@@ -14,11 +14,11 @@ class Experience(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     organization = models.CharField(max_length=255)
-    location = models.CharField(max_length=255, default="Depok, West Java")
+    location = models.CharField(max_length=255)
     date_range = models.CharField(max_length=100)
-    category = models.CharField(max_length=50, choices=EXPERIENCE_CHOICES, default='ORGANIZATION')
+    category = models.CharField(max_length=50, choices=EXPERIENCE_CHOICES)
     description = models.TextField(blank=True, null=True)
-    is_ongoing = models.BooleanField(default=False)
+    is_ongoing = models.BooleanField()
 
     def __str__(self):
         return f"{self.title} - {self.organization}"
@@ -34,8 +34,8 @@ class Education(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     institution = models.CharField(max_length=255)
-    degree = models.CharField(max_length=50, choices=DEGREE_CHOICES, default='bachelor')
-    field_of_study = models.CharField(max_length=255, default="Computer Science")
+    degree = models.CharField(max_length=50, choices=DEGREE_CHOICES)
+    field_of_study = models.CharField(max_length=255)
     date_range = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
@@ -54,7 +54,7 @@ class Award(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     issuer = models.CharField(max_length=255)
-    category = models.CharField(max_length=50, choices=AWARD_TYPE_CHOICES, default='competition')
+    category = models.CharField(max_length=50, choices=AWARD_TYPE_CHOICES)
     date_awarded = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 

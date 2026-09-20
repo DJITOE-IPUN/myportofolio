@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.core import serializers
 from main.models import Education, Project, Award, Experience
-from main.forms import EducationForm, ProjectForm, AwardForm
+from main.forms import EducationForm, ProjectForm, AwardsForm
 
 # --- VIEWS UTAMA ---
 def show_main(request):
@@ -13,6 +13,14 @@ def show_main(request):
         'bio': "Hi, I'm Evan. Computer Science student at Universitas Indonesia driven by a passion for defence tech & system engineering.",
     }
     return render(request, "index.html", context)
+
+def show_experience(request):
+    experience_list = Experience.objects.all()
+    context = {
+        'name': 'Michael Evan Putra Nugroho',
+        'experience_list': experience_list,
+    }
+    return render(request, "experience.html", context)
 
 def show_education(request):
     education_list = Education.objects.all()
@@ -61,7 +69,7 @@ def create_project(request):
     return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
 
 def create_award(request):
-    form = AwardForm(request.POST or None)
+    form = AwardsForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')
@@ -87,7 +95,7 @@ def edit_project(request, id):
 
 def edit_award(request, id):
     award = get_object_or_404(Award, pk=id)
-    form = AwardForm(request.POST or None, instance=award)
+    form = AwardsForm(request.POST or None, instance=award)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')

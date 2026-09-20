@@ -34,7 +34,7 @@
                             <div class="project-card-actions" style="margin-top: 1rem;">
                                 <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <a href="{% url 'main:edit_award' award.id %}" class="button button-secondary">Ubah</a>
-                                    {% include "components/award_delete_modal.html" with award=award %}
+                                    {% include "components/awards_delete_modal.html" with award=award %}
                                 </div>
                             </div>
                         </article>

@@ -24,25 +24,25 @@ class EducationForm(ModelForm):
         widgets = {
             "institution": TextInput(
                 attrs={
-                    "placeholder": "Universitas Indonesia, SMA Taruna Nusantara, dll.",
+                    "placeholder": "SD, SMP, SMA, PT/AK/DNS",
                     "maxlength": 255,
                 }
             ),
             "degree": TextInput(
                 attrs={
-                    "placeholder": "S1 / Sarjana, High School Diploma, dll.",
+                    "placeholder": "Diploma, Sarjana, Magister, Doktor",
                     "maxlength": 255,
                 }
             ),
             "field_of_study": TextInput(
                 attrs={
-                    "placeholder": "Ilmu Komputer, MIPA, dll.",
+                    "placeholder": "Fakultas / Jurusan",
                     "maxlength": 255,
                 }
             ),
             "date_range": TextInput(
                 attrs={
-                    "placeholder": "2025 - Present, 2022 - 2025",
+                    "placeholder": "Tahun - Tahun",
                     "maxlength": 100,
                 }
             ),
@@ -105,7 +105,7 @@ class ProjectForm(ModelForm):
         }
 
 
-class AwardForm(ModelForm):
+class AwardsForm(ModelForm):
     class Meta:
         model = Award
         fields = [
@@ -125,19 +125,19 @@ class AwardForm(ModelForm):
         widgets = {
             "title": TextInput(
                 attrs={
-                    "placeholder": "Juara 1 Hackathon / Best Paper Award",
+                    "placeholder": "Kejuaran, Olimpiade",
                     "maxlength": 255,
                 }
             ),
             "issuer": TextInput(
                 attrs={
-                    "placeholder": "Fasilkom UI / Kementerian Kominfo",
+                    "placeholder": "Instansi penyelenggara",
                     "maxlength": 255,
                 }
             ),
             "date_awarded": TextInput(
                 attrs={
-                    "placeholder": "2026",
+                    "placeholder": "Tahun diterima",
                     "maxlength": 100,
                 }
             ),
