@@ -27,7 +27,7 @@ class Experience(models.Model):
 class Education(models.Model):
     DEGREE_CHOICES = [
         ('bachelor', 'S1 / Bachelor Degree'),
-        ('secondary_school', 'SMP/SMA / High School'),
+        ('secondary_school', 'SMP / SMA / High School'),
         ('diploma', 'Diploma'),
         ('master', 'S2 / Master Degree'),
     ]

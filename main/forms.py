@@ -1,8 +1,28 @@
+from django import forms
 from django.forms import ModelForm, TextInput, Textarea, URLInput
 from main.models import Education, Project, Award, Experience
 
 
 class EducationForm(ModelForm):
+    def clean_degree(self):
+        degree = self.cleaned_data.get("degree", "").strip()
+        normalized = {
+            "bachelor": "bachelor",
+            "bachelors": "bachelor",
+            "s1": "bachelor",
+            "sarjana": "bachelor",
+            "secondary school": "secondary_school",
+            "high school": "secondary_school",
+            "sma": "secondary_school",
+            "smk": "secondary_school",
+            "diploma": "diploma",
+            "d3": "diploma",
+            "master": "master",
+            "s2": "master",
+            "magister": "master",
+        }
+        return normalized.get(degree.lower(), degree)
+
     class Meta:
         model = Education
         fields = [
@@ -30,7 +50,7 @@ class EducationForm(ModelForm):
             ),
             "degree": TextInput(
                 attrs={
-                    "placeholder": "Diploma, Sarjana, Magister, Doktor",
+                    "placeholder": "bachelor / secondary_school / diploma / master",
                     "maxlength": 255,
                 }
             ),

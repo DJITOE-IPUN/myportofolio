@@ -23,18 +23,18 @@ urlpatterns = [
     path('awards/create/', create_award, name='create_award'),
 
     # Edit Routes
-    path('education/edit/<uuid:id>/', edit_education, name='edit_education'),
-    path('projects/edit/<uuid:id>/', edit_project, name='edit_project'),
-    path('awards/edit/<uuid:id>/', edit_award, name='edit_award'),
+    path('education/edit/<str:id>/', edit_education, name='edit_education'),
+    path('projects/edit/<str:id>/', edit_project, name='edit_project'),
+    path('awards/edit/<str:id>/', edit_award, name='edit_award'),
 
     # Delete Routes
-    path('education/delete/<uuid:id>/', delete_education, name='delete_education'),
-    path('projects/delete/<uuid:id>/', delete_project, name='delete_project'),
-    path('awards/delete/<uuid:id>/', delete_award, name='delete_award'),
+    path('education/delete/<str:id>/', delete_education, name='delete_education'),
+    path('projects/delete/<str:id>/', delete_project, name='delete_project'),
+    path('awards/delete/<str:id>/', delete_award, name='delete_award'),
 
     # JSON Data Delivery Routes
     path('json/education/', show_json_education, name='show_json_education'),
     path('json/projects/', show_json_projects, name='show_json_projects'),
     path('json/awards/', show_json_awards, name='show_json_awards'),
-    path('json/<str:model_type>/<uuid:id>/', show_json_by_id, name='show_json_by_id'),
+    path('json/<str:model_type>/<str:id>/', show_json_by_id, name='show_json_by_id'),
 ]

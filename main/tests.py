@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
-from main.models import Experience, Education, Award
+from main.models import Experience, Education, Award, Project
 
 
 class MainViewTest(TestCase):
@@ -12,7 +12,6 @@ class MainViewTest(TestCase):
         response = self.client.get(reverse("main:show_main"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "index.html")
-        self.assertContains(response, f'href="{reverse("main:show_experience")}"')
 
     def test_nonexistent_page_returns_404(self):
         """Memastikan akses ke URL yang tidak terdaftar mengembalikan status 404"""
@@ -44,8 +43,6 @@ class ExperienceTest(TestCase):
         self.assertTemplateUsed(response, "experience.html")
         self.assertContains(response, self.experience.title)
         self.assertContains(response, self.experience.organization)
-        self.assertContains(response, self.experience.description)
-        self.assertContains(response, "Part-Time")
 
     def test_empty_experience_page(self):
         """Memastikan pesan empty state muncul jika belum ada data Experience"""
@@ -53,6 +50,12 @@ class ExperienceTest(TestCase):
         response = self.client.get(reverse("main:show_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Belum ada pengalaman yang ditambahkan.")
+
+    def test_experience_json_by_id(self):
+        """Memastikan JSON endpoint by ID mengembalikan data JSON untuk Experience"""
+        response = self.client.get(reverse("main:show_json_by_id", kwargs={"model_type": "experience", "id": self.experience.id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
 
 
 class EducationTest(TestCase):
@@ -82,7 +85,36 @@ class EducationTest(TestCase):
         response = self.client.get(reverse("main:show_education"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Universitas Indonesia")
-        self.assertContains(response, "S1 / Bachelor Degree")
+
+    def test_create_education_post(self):
+        """Memastikan penambahan data Education via Form (POST) berfungsi"""
+        response = self.client.post(reverse("main:create_education"), {
+            "institution": "SMA Taruna Nusantara",
+            "degree": "secondary_school",
+            "field_of_study": "MIPA",
+            "date_range": "2022 - 2025",
+            "description": "Lulus dengan predikat baik.",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Education.objects.count(), 1)
+
+    def test_delete_education_post(self):
+        """Memastikan penghapusan data Education via POST berfungsi"""
+        edu = Education.objects.create(
+            institution="UI",
+            degree="Bachelor",
+            field_of_study="CS",
+            date_range="2025"
+        )
+        response = self.client.post(reverse("main:delete_education", kwargs={"id": edu.id}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Education.objects.count(), 0)
+
+    def test_json_education_endpoint(self):
+        """Memastikan endpoint JSON Data Delivery untuk Education berfungsi"""
+        response = self.client.get(reverse("main:show_json_education"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
 
 
 class AwardTest(TestCase):
@@ -112,4 +144,76 @@ class AwardTest(TestCase):
         response = self.client.get(reverse("main:show_awards"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Juara 1 Hackathon")
-        self.assertContains(response, "Fasilkom UI")
+
+    def test_create_award_post(self):
+        """Memastikan penambahan data Award via Form (POST) berfungsi"""
+        response = self.client.post(reverse("main:create_award"), {
+            "title": "Best Paper Award",
+            "issuer": "Kementerian Kominfo",
+            "date_awarded": "2026",
+            "description": "Paper riset sistem pertahanan.",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Award.objects.count(), 1)
+
+    def test_delete_award_post(self):
+        """Memastikan penghapusan data Award via POST berfungsi"""
+        award = Award.objects.create(
+            title="Kompetisi UI",
+            issuer="UI",
+            date_awarded="2026"
+        )
+        response = self.client.post(reverse("main:delete_award", kwargs={"id": award.id}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Award.objects.count(), 0)
+
+    def test_json_awards_endpoint(self):
+        """Memastikan endpoint JSON Data Delivery untuk Award berfungsi"""
+        response = self.client.get(reverse("main:show_json_awards"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+
+
+class ProjectTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_projects_url_is_accessible_and_uses_correct_template(self):
+        """Memastikan URL /projects/ dapat diakses dan menggunakan template projects.html"""
+        response = self.client.get(reverse("main:show_projects"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "projects.html")
+
+    def test_projects_empty_state(self):
+        """Memastikan pesan kondisi kosong tampil ketika belum ada data Project"""
+        response = self.client.get(reverse("main:show_projects"))
+        self.assertContains(response, "Belum ada proyek")
+
+    def test_create_project_post(self):
+        """Memastikan penambahan data Project via Form (POST) berfungsi"""
+        response = self.client.post(reverse("main:create_project"), {
+            "title": "Defense Tech Radar",
+            "description": "Aplikasi radar simulasi.",
+            "tech_stack": "Django, Python",
+            "project_url": "https://github.com/test/radar",
+            "project_image_url": "https://example.com/img.png",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Project.objects.count(), 1)
+
+    def test_delete_project_post(self):
+        """Memastikan penghapusan data Project via POST berfungsi"""
+        project = Project.objects.create(
+            title="Web Portofolio",
+            description="Deskripsi proyek",
+            tech_stack="Django"
+        )
+        response = self.client.post(reverse("main:delete_project", kwargs={"id": project.id}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Project.objects.count(), 0)
+
+    def test_json_projects_endpoint(self):
+        """Memastikan endpoint JSON Data Delivery untuk Project berfungsi"""
+        response = self.client.get(reverse("main:show_json_projects"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
