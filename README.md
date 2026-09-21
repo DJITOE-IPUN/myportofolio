@@ -115,7 +115,7 @@ Pada Tugas 2 ini, dilakukan pengembangan arsitektur Model-View-Template (MVT) pa
 #### AI Disclosure
 
 * **Tools AI yang Digunakan**: Gemini (Google AI).
-* **Link / Public Share Log Chat**: [Tempelkan Tautan Share Chat Gemini Kamu di Sini]
+* **Link / Public Share Log Chat**: ristek.link/AI-chat-log-tugas-2
 
 ##### 1. Strategi Prompting & Arsitektur Interaksi
 Dalam pengerjaan Tugas 2 ini, diterapkan metode **Iterative System-Constrained Prompting** bertahap. AI dilarang menghasilkan *boilerplate code* secara masif tanpa persetujuan struktur. Pembatasan dilakukan dengan memberikan parameter ketat:
@@ -153,5 +153,86 @@ Meskipun AI sangat mempercepat generasi struktur dasar kode, ditemukan 3 keterba
 ##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
 Seluruh pembaruan backend pada `main/models.py`, pemisahan jalur routing `main/urls.py`, eksekusi migrasi basis data (`0002_...`), penyelarasan DTL antarmuka, hingga kelulusan 6 pengujian unit otomatis di `main/tests.py` telah diverifikasi dan disesuaikan 100% secara manual untuk memastikan keandalan aplikasi di lingkungan lokal.
 
-##### 5. AI Chat Log
-*Selengkapnya dapat dilihat pada tautan berikut:* ristek.link/AI-chat-log-tugas-2
+---
+
+### Tugas 3: Form & Data Delivery
+
+#### Ringkasan Perubahan 3 (Tugas 3)
+Pada Tugas 3, dilakukan pengayaan fungsionalitas aplikasi portofolio melalui penanganan formulir interaktif (*Form Handling*), operasi manipulasi data (Create, Update, Delete), serta penyediaan *endpoint* pengiriman data berformat JSON:
+
+1. **Refactoring Template Inheritance (`base.html`)**: Mengkonsolidasikan elemen `<head>`, *navigation bar* global (Profile, Experience, Education, Awards, Projects), dan *footer* ke dalam `base.html` sebagai *parent template* utama. Seluruh *child templates* merelokasi struktur kode dengan `{% extends 'base.html' %}` dan `{% block content %}`.
+2. **Pengembangan `ModelForm` Modular**: Mengimplementasikan kelas `EducationForm`, `ProjectForm`, dan `AwardForm` pada `main/forms.py` yang terhubung langsung dengan model ORM Django. Setiap form dilengkapi penyesuaian *widgets*, *labels*, dan *placeholders*.
+3. **Penerapan Fungsi CRUD (Create, Update, Delete)**:
+   - **Create**: Fungsi `create_education`, `create_project`, dan `create_award` untuk memproses penambahan data baru via formulir `POST`.
+   - **Update (Edit)**: Fungsi `edit_education`, `edit_project`, dan `edit_award` yang memanfaatkan argumen `instance` pada `ModelForm` untuk mengubah data yang sudah ada.
+   - **Delete**: Fungsi `delete_education`, `delete_project`, dan `delete_award` yang diproses secara aman menggunakan metode `POST` dengan CSRF protection.
+4. **Komponen Konfirmasi Hapus UI (`popover` Modal)**: Mengintegrasikan komponen *modal dialog* berbasis fitur *native* HTML5 `popover` di `templates/components/` untuk konfirmasi penghapusan data secara interaktif tanpa ketergantungan pustaka JavaScript luar.
+5. **JSON Data Delivery Endpoints**: Menyediakan *endpoint* serialisasi data berformat JSON pada `main/views.py` (`show_json_education`, `show_json_projects`, `show_json_awards`, serta `show_json_by_id`) yang memanfaatkan `django.core.serializers`.
+6. **Pengujian Unit Otomatis (Unit Testing)**: Memperbarui suite pengujian pada `main/tests.py` untuk menguji penambahan data via form `POST`, penghapusan data, serta validasi *Content-Type: application/json* pada *endpoint* JSON.
+
+---
+
+#### Pertanyaan Reflektif
+
+1. **Keunggulan `ModelForm` Dibandingkan Form HTML Manual**
+   Menggunakan `ModelForm` Django memiliki beberapa keunggulan utama dibandingkan membuat form HTML manual dari awal:
+   - **Otomatisasi Validasi & Binding Data**: `ModelForm` secara otomatis memetakan tipe data, aturan validasi, serta batasan (*constraints*) dari model ORM (seperti `max_length` atau `required`) tanpa perlu menuliskan pengecekan manual di *view*.
+   - **Eksekusi Penyimpanan Efisien (`form.save()`)**: `ModelForm` menyediakan metode `.save()` yang langsung mengabstraksi pembuatan objek ORM baru atau pembaruan objek `instance` tanpa perlu melakukan ekstraksi variabel `request.POST.get()` satu per satu.
+   - **Pencegahan Redundansi Kode (*DRY Principle*)**: Struktur bidang (*fields*) pada form cukup didefinisikan satu kali merujuk ke kelas modelnya, sehingga perubahan skema di `models.py` akan otomatis terefleksi pada form.
+   - **Sistem Error Handling Terintegrasi**: `ModelForm` secara otomatis menangkap *validation error* dan meneruskannya ke *template* HTML melalui `{{ field.errors }}` untuk ditampilkan ke pengguna.
+
+2. **Mekanisme Proteksi CSRF (`{% csrf_token %}`) pada Django**
+   - **Cara Kerja**: Ketika *template* merender tag `{% csrf_token %}`, Django menghasilkan nilai token rahasia yang acak (*cryptographically secure token*) dan menyisipkannya sebagai *hidden input* di dalam formulir HTML. Token yang sama juga disimpan dalam *cookie* peramban pengguna. Saat formulir dikirimkan melalui metode `POST`, middleware Django (`CsrfViewMiddleware`) mencocokkan token dari formulir dengan token pada *cookie*.
+   - **Pentingnya Proteksi CSRF**: Serangan *Cross-Site Request Forgery* (CSRF) terjadi ketika situs berbahaya mengeksekusi aksi tak terotorisasi atas nama pengguna yang sedang terautentikasi. Proteksi CSRF memastikan bahwa setiap permintaan mutasi data (`POST`, `PUT`, `DELETE`) benar-benar berasal dari antarmuka resmi aplikasi kita, bukan dari Domain pihak ketiga.
+
+3. **Perbedaan Pengiriman Data Format HTML vs Format JSON**
+   - **Format HTML (Server-Side Rendering)**:
+   - *Karakteristik*: Server memproses data ORM, memasukkannya ke *template* DTL, dan mengembalikan dokumen HTML utuh yang siap ditampilkan langsung oleh peramban.
+     - *Kelebihan*: Ramah SEO, memindahkan beban komputasi antarmuka ke server, dan tidak memerlukan pemrosesan JavaScript tambahan di *client*.
+     - *Kapan Digunakan*: Tampilan halaman web statis/dinamis standar yang dibaca langsung oleh pengguna manusia (*human interface*).
+   - **Format JSON (Data Delivery Endpoint)**:
+   - *Karakteristik*: Server hanya mengirimkan struktur data mentah (*raw key-value data*) terkompresi tanpa elemen dekorasi atau *styling* HTML.
+     - *Kelebihan*: Ukuran data jauh lebih ringan, bersifat independen dari tampilan visual, serta dapat dikonsumsi oleh berbagai jenis *client* (seperti aplikasi *frontend* JavaScript/React/Vue, aplikasi seluler Flutter, atau integrasi API pihak ketiga).
+   - *Kapan Digunakan*: Pembangunan aplikasi SPA (*Single Page Application*), interaktivitas AJAX/Fetch asynchronous di *frontend*, integrasi aplikasi *mobile*, atau penyediaan layanan Web API REST.
+
+---
+
+#### AI Disclosure
+
+* **Tools AI yang Digunakan**: Gemini (Google AI).
+* **Link / Public Share Log Chat**: ristek.link/AI-chat-log-tugas-3
+
+##### 1. Strategi Prompting & Arsitektur Interaksi
+Pengembangan Tugas 3 menerapkan pendekatan **Iterative System-Constrained Prompting**. Perintah dibatasi oleh instruksi eksplisit agar AI tidak menghasilkan kode *over-engineered* atau menggunakan pustaka JavaScript pihak ketiga yang kompleks, sehingga seluruh alur MVT, *forms*, dan *routing* tetap mudah dipahami dan dipertanggungjawabkan secara penuh saat sesi *demo* lab.
+
+##### 2. Kronologi Log Prompting Utama
+
+| Tahap | Tujuan Prompt | Luaran AI (*Output*) | Tindakan & Evaluasi Pengembang |
+| --- | --- | --- | --- |
+| **01** | Refactoring *template inheritance* dengan `base.html`. | Draf `base.html` serta pembersihan tag duplikat di `index.html`, `experience.html`, dll. | **Disetujui**: Mengonsolidasikan `<head>`, navigasi 5 menu, dan *footer*. |
+| **02** | Perancangan `ModelForm` untuk Education, Project, dan Award. | Generasi kelas `EducationForm`, `ProjectForm`, dan `AwardForm` di `main/forms.py`. | **Koreksi Manual**: Memperbaiki kunci *widget* `"date-range"` menjadi `"date_range"` dan mengubah `URLInput` menjadi `TextInput`. |
+| **03** | Penyusunan fungsi CRUD dan *JSON endpoints* di `views.py`. | Fungsi *create*, *edit*, *delete*, dan *serializers JSON*. | **Koreksi Manual**: Mengoreksi nama *import* `AwardsForm` menjadi `AwardForm`. |
+| **04** | Pendaftaran URL routing di `main/urls.py`. | Jalur URL CRUD dan JSON Data Delivery. | **Koreksi Manual**: Mengubah *converter* `<uuid:id>` menjadi `<str:id>` agar fleksibel menerima ID integer maupun string UUID. |
+| **05** | Penyusunan *Unit Test* untuk Form POST, Delete, dan JSON. | Kasus pengujian unit di `main/tests.py`. | **Disetujui**: Menjaga struktur *class* tes lama dan menambahkan metode pengujian fungsionalitas baru. |
+
+##### 3. Analisis Keterbatasan AI
+
+Dalam proses pengembangan, ditemukan 3 keterbatasan teknis yang berhasil diidentifikasi dan dikoreksi secara manual (*Human-in-the-Loop*):
+
+1. **Inkompatibilitas URL Path Converter (`<uuid:id>` vs Primary Key Auto-Increment)**
+   - *Keterbatasan AI*: AI secara otomatis menggenerasi jalur URL pada `main/urls.py` menggunakan tipe *converter* `<uuid:id>` untuk seluruh parameter ID.
+   - *Dampak*: Apabila skema model Django menggunakan Primary Key integer *auto-increment* bawaan (`1`, `2`, `3`), URL converter `<uuid:id>` akan menolak permintaan HTTP dan mengembalikan galat `404 Not Found`.
+   - *Perbaikan Manual*: Mengubah seluruh *converter* URL parameter ID pada `main/urls.py` dari `<uuid:id>` menjadi `<str:id>` agar aplikasi dapat menangani ID berupa string UUID maupun angka integer.
+
+2. **Isu Flexibilitas Tag Action pada Form HTML Reusable**
+   - *Keterbatasan AI*: AI memberikan atribut `action="{% url 'main:create_education' %}"` secara keras (*hardcoded*) di dalam tag `<form>` pada berkas *template* form.
+   - *Dampak*: Berkas *template* form tersebut menjadi tidak bisa digunakan kembali (*non-reusable*) untuk fungsi Ubah/Edit data (`edit_education`), karena form akan selalu mengirimkan data `POST` ke *endpoint create*.
+   - *Perbaikan Manual*: Mengosongkan atribut `action` (menjadi `<form method="post">`) sehingga formulir secara fleksibel mengirimkan data `POST` ke URL tempat form tersebut sedang dirender, memungkinkan 1 berkas *template* yang sama digunakan untuk operasi *Create* maupun *Update*.
+
+3. **Inkonsistensi Impor Kelas Form pada Views (`AwardsForm` vs `AwardForm`)**
+   - *Keterbatasan AI*: AI menghasilkan pernyataan impor `from main.forms import AwardsForm` (menggunakan akhiran 's') pada `main/views.py`, padahal kelas yang terdefinisi pada `forms.py` bernama `AwardForm`.
+   - *Dampak*: Server Django mengalami galat `ImportError` yang membuat seluruh aplikasi *crash* saat dijalankan.
+   - *Perbaikan Manual*: Mengubah nama *import* di `main/views.py` menjadi `AwardForm` secara manual agar selaras dengan definisi kelas pada `main/forms.py`.
+
+##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
+Seluruh refactoring DTL `base.html`, perbaikan *bug widget* pada `forms.py`, penyelarasan *routing* `urls.py`, hingga pembaruan pengujian unit pada `main/tests.py` telah diverifikasi, dites via `python manage.py test`, dan dipastikan berjalan 100% aman di lingkungan lokal.
