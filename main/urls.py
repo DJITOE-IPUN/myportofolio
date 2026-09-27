@@ -4,7 +4,8 @@ from main.views import (
     create_education, create_project, create_award,
     edit_education, edit_project, edit_award,
     delete_education, delete_project, delete_award,
-    show_json_education, show_json_projects, show_json_awards, show_json_by_id
+    show_json_education, show_json_projects, show_json_awards, show_json_by_id, 
+    register, login_user, logout_user, toggle_star
 )
 
 app_name = 'main'
@@ -37,4 +38,9 @@ urlpatterns = [
     path('json/projects/', show_json_projects, name='show_json_projects'),
     path('json/awards/', show_json_awards, name='show_json_awards'),
     path('json/<str:model_type>/<str:id>/', show_json_by_id, name='show_json_by_id'),
+
+    path("register/", register, name="register"),
+    path("login/", login_user, name="login"),
+    path("logout/", logout_user, name="logout"),
+    path("projects/<uuid:project_id>/star/", toggle_star, name="toggle_star"),
 ]
