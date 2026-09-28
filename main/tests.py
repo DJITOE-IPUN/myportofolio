@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.contrib.auth.models import User
 from main.models import Experience, Education, Award, Project
 
 
@@ -61,6 +62,11 @@ class ExperienceTest(TestCase):
 class EducationTest(TestCase):
     def setUp(self):
         self.client = Client()
+        # Buat user superuser untuk pengujian yang membutuhkan hak akses penuh
+        self.superuser = User.objects.create_superuser(
+            username="admin_test", password="password123"
+        )
+        self.client.force_login(self.superuser)
 
     def test_education_url_is_accessible_and_uses_correct_template(self):
         """Memastikan URL /education/ dapat diakses dan menggunakan template education.html"""
@@ -87,10 +93,10 @@ class EducationTest(TestCase):
         self.assertContains(response, "Universitas Indonesia")
 
     def test_create_education_post(self):
-        """Memastikan penambahan data Education via Form (POST) berfungsi"""
+        """Memastikan penambahan data Education via Form (POST) berfungsi untuk Superuser"""
         response = self.client.post(reverse("main:create_education"), {
             "institution": "SMA Taruna Nusantara",
-            "degree": "secondary_school",
+            "degree": "bachelor",
             "field_of_study": "MIPA",
             "date_range": "2022 - 2025",
             "description": "Lulus dengan predikat baik.",
@@ -99,7 +105,7 @@ class EducationTest(TestCase):
         self.assertEqual(Education.objects.count(), 1)
 
     def test_delete_education_post(self):
-        """Memastikan penghapusan data Education via POST berfungsi"""
+        """Memastikan penghapusan data Education via POST berfungsi untuk Superuser"""
         edu = Education.objects.create(
             institution="UI",
             degree="Bachelor",
@@ -120,6 +126,10 @@ class EducationTest(TestCase):
 class AwardTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.superuser = User.objects.create_superuser(
+            username="admin_test_award", password="password123"
+        )
+        self.client.force_login(self.superuser)
 
     def test_awards_url_is_accessible_and_uses_correct_template(self):
         """Memastikan URL /awards/ dapat diakses dan menggunakan template awards.html"""
@@ -146,7 +156,7 @@ class AwardTest(TestCase):
         self.assertContains(response, "Juara 1 Hackathon")
 
     def test_create_award_post(self):
-        """Memastikan penambahan data Award via Form (POST) berfungsi"""
+        """Memastikan penambahan data Award via Form (POST) berfungsi untuk Superuser"""
         response = self.client.post(reverse("main:create_award"), {
             "title": "Best Paper Award",
             "issuer": "Kementerian Kominfo",
@@ -157,7 +167,7 @@ class AwardTest(TestCase):
         self.assertEqual(Award.objects.count(), 1)
 
     def test_delete_award_post(self):
-        """Memastikan penghapusan data Award via POST berfungsi"""
+        """Memastikan penghapusan data Award via POST berfungsi untuk Superuser"""
         award = Award.objects.create(
             title="Kompetisi UI",
             issuer="UI",
@@ -177,6 +187,10 @@ class AwardTest(TestCase):
 class ProjectTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.superuser = User.objects.create_superuser(
+            username="admin_test_project", password="password123"
+        )
+        self.client.force_login(self.superuser)
 
     def test_projects_url_is_accessible_and_uses_correct_template(self):
         """Memastikan URL /projects/ dapat diakses dan menggunakan template projects.html"""
@@ -190,7 +204,7 @@ class ProjectTest(TestCase):
         self.assertContains(response, "Belum ada proyek")
 
     def test_create_project_post(self):
-        """Memastikan penambahan data Project via Form (POST) berfungsi"""
+        """Memastikan penambahan data Project via Form (POST) berfungsi untuk Superuser"""
         response = self.client.post(reverse("main:create_project"), {
             "title": "Defense Tech Radar",
             "description": "Aplikasi radar simulasi.",
@@ -202,7 +216,7 @@ class ProjectTest(TestCase):
         self.assertEqual(Project.objects.count(), 1)
 
     def test_delete_project_post(self):
-        """Memastikan penghapusan data Project via POST berfungsi"""
+        """Memastikan penghapusan data Project via POST berfungsi untuk Superuser"""
         project = Project.objects.create(
             title="Web Portofolio",
             description="Deskripsi proyek",
