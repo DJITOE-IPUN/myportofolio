@@ -236,3 +236,69 @@ Dalam proses pengembangan, ditemukan 3 keterbatasan teknis yang berhasil diident
 
 ##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
 Seluruh refactoring DTL `base.html`, perbaikan *bug widget* pada `forms.py`, penyelarasan *routing* `urls.py`, hingga pembaruan pengujian unit pada `main/tests.py` telah diverifikasi, dites via `python manage.py test`, dan dipastikan berjalan 100% aman di lingkungan lokal.
+
+---
+
+### Tugas 4: Authentication, Session, and Cookies Implementation
+
+#### Ringkasan Perubahan 4 (Tugas 4)
+Pada Tugas 4, dilakukan implementasi sistem autentikasi, manajemen sesi, cookies, serta otorisasi berjenjang berbasis 4 tingkat hak akses (*4-tier authorization*) pada situs portofolio:
+
+1. **Relasi Model Data & Migrasi (`stars`)**: Menambahkan *field* `stars` menggunakan `ManyToManyField(User)` pada model `Project` di `main/models.py` untuk mengimplementasikan fitur *star* interaktif per pengguna.
+2. **Implementasi Otorisasi 4 Peran (*Server-Side Checks*)**:
+   - **Pengunjung (Guest)**: Bebas membaca data. Mengakses fungsi mutasi (*create/edit/delete*) atau *star* memicu *redirect* otomatis ke halaman Login (`@login_required`).
+   - **Pengguna Biasa (Logged-in User)**: Dapat membaca data dan memberi/membatalkan *star* (maksimal 1 *star* per proyek). Mencoba eksekusi CRUD ditolak dengan HTTP `403 Forbidden`.
+   - **Editor**: Memiliki hak Pengguna Biasa serta dapat mengubah data (`edit_project`), namun ditolak HTTP `403 Forbidden` jika mencoba menambah (`create`) atau menghapus (`delete`) data. Hak akses dikelola via Django Group `Editor`.
+   - **Pemilik Portofolio (Superuser)**: Memiliki hak akses penuh untuk membuat (`create_project`), mengubah (`edit_project`), menghapus (`delete_project`), serta memberikan/membatalkan *star*.
+3. **Komponen UI Interaktif & DTL Conditional Rendering**:
+   - Membangun komponen reusable `templates/components/project_star.html` dengan form `POST` dan token `{% csrf_token %}`.
+   - Mengatur kondisional DTL `{% if %}` di `templates/projects.html` untuk menampilkan tombol Tambah/Hapus (Superuser saja), Edit (Editor & Superuser), dan Star (Logged-in User).
+4. **Keamanan & Integritas Endpoint API JSON**: Memastikan *endpoint* JSON (`show_json_projects`) tetap berjalan aman tanpa mengekspos *field* sensitif pengguna seperti *password hash* atau token sesi.
+5. **Pengujian Unit Otomatis (Unit Testing)**: Memperbarui suite pengujian pada `main/tests.py` dengan memanfaatkan `self.client.force_login(self.superuser)` agar seluruh 23 kasus uji lulus berstatus `OK`.
+
+---
+
+#### Pertanyaan Reflektif
+> *Catatan: Pertanyaan reflektif untuk pekan ini dihilangkan sesuai instruksi resmi Tugas 4.*
+
+---
+
+#### AI Disclosure
+
+* **Tools AI yang Digunakan**: Gemini (Google AI).
+* **Link / Public Share Log Chat**: ristek.link/AI-chat-log-tugas-4
+
+##### 1. Strategi Prompting & Arsitektur Interaksi
+Pengembangan Tugas 4 menerapkan pendekatan **Iterative System-Constrained Prompting**. Perintah dibatasi oleh instruksi eksplisit agar AI tidak menghasilkan kode *over-engineered* atau mengabaikan pengecekan keamanan di sisi server (*server-side authorization*). Seluruh alur otorisasi 4 peran, relasi ORM `ManyToManyField`, serta suite pengujian diselaraskan agar 100% dipahami dan dapat dipertanggungjawabkan saat sesi *demo* lab bersama asisten dosen.
+
+##### 2. Kronologi Log Prompting Utama
+
+| Tahap | Tujuan Prompt | Luaran AI (*Output*) | Tindakan & Evaluasi Pengembang |
+| --- | --- | --- | --- |
+| **01** | Penambahan relasi `ManyToManyField` pada model `Project`. | Penambahan *field* `stars = models.ManyToManyField(User)` pada `main/models.py`. | **Koreksi Manual**: Membedakan `related_name='starred_projects'` agar tidak bentrok (*clash*) dengan model lain. |
+| **02** | Perancangan logika otorisasi 4 peran dan `toggle_star` pada `views.py`. | Fungsi `toggle_star`, *helper* `check_is_editor`, serta pengecekan `HttpResponseForbidden`. | **Disetujui**: Mengintegrasikan dekorator `@login_required` dan `@require_POST` pada aksi mutasi. |
+| **03** | Pembentukan komponen UI DTL & penyesuaian `projects.html`. | Berkas `project_star.html` dan pengondisian DTL `{% if %}` di `projects.html`. | **Disetujui**: Menyembunyikan tombol aksi sensitif sesuai peran pengguna secara dinamis. |
+| **04** | Pendaftaran URL routing di `main/urls.py`. | Path `projects/<uuid:id>/star/` dan penyesuaian rute CRUD. | **Disetujui**: Menjaga konsistensi penamaan rute *named routes*. |
+| **05** | Perbaikan *Unit Testing* akibat proteksi otorisasi. | Pembaruan `main/tests.py` dengan `force_login`. | **Koreksi Manual**: Mengubah nilai *degree* pada `EducationTest` dari string deskriptif ke kunci *choices* ORM (`bachelor`). |
+
+##### 3. Analisis Keterbatasan AI
+
+Dalam proses pengembangan Tugas 4, ditemukan 3 keterbatasan AI yang berhasil diidentifikasi dan dikoreksi secara manual (*Human-in-the-Loop*):
+
+1. **Bentrokan Nama Relasi Balik (*Reverse Accessor Clash* / `fields.E304`)**
+   - *Keterbatasan AI*: Saat menyarankankan relasi `ManyToManyField(User)`, AI menggunakan nilai `related_name='starred_projects'` yang identik pada model `Project` dan model `Experience`.
+   - *Dampak*: Menjalankan `python manage.py makemigrations` memicu galat `SystemCheckError: (fields.E304) Reverse accessor clashes`, yang menghentikan proses migrasi basis data.
+   - *Perbaikan Manual*: Mengisolasi `related_name` secara eksplisit menjadi `'starred_projects'` khusus pada model `Project` dan `'starred_experiences'` pada model `Experience`.
+
+2. **Kegagalan Validasi Choice Field pada Unit Testing (`AssertionError: 200 != 302`)**
+   - *Keterbatasan AI*: AI memberikan nilai string `"High School"` pada payload test `Education`, padahal skema model memerlukan kunci *choices* yang terdefinisi pada ORM (`"bachelor"` / `"high_school"`).
+   - *Dampak*: `form.is_valid()` bernilai `False` saat POST request diuji, menyebabkan server mengembalikan status `200 OK` (render ulang form berpesan error) alih-alih `302 Found` (redirect sukses).
+   - *Perbaikan Manual*: Mengoreksi nilai payload pada `test_create_education_post` menjadi kunci pilihan yang valid (`"bachelor"`) sehingga seluruh 23 unit test lulus sempurna.
+
+3. **Inkompatibilitas Akses Sesi pada Test Client Tanpa Autentikasi**
+   - *Keterbatasan AI*: AI menggenerasi draf awal unit test tanpa memperhitungkan dampak penambahan proteksi otorisasi server-side (`@login_required` dan `HttpResponseForbidden`).
+   - *Dampak*: Seluruh test POST `create_*` dan `delete_*` mengalami kegagalan (*6 failures*) karena di-redirect ke login atau ditolak dengan HTTP 403.
+   - *Perbaikan Manual*: Menambahkan pembuatan akun superuser (`User.objects.create_superuser`) dan mengeksekusi `self.client.force_login(self.superuser)` pada metode `setUp()` di kelas tes terkait.
+
+##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
+Seluruh penambahan skema ORM `stars`, pembuatan logika *helper authorization* di `views.py`, penyusunan komponen UI DTL `project_star.html`, hingga penyelarasan 23 kasus uji unit pada `main/tests.py` telah diverifikasi dan dites 100% secara manual di lingkungan lokal.
