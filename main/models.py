@@ -21,6 +21,11 @@ class Experience(models.Model):
     description = models.TextField(blank=True, null=True)
     is_ongoing = models.BooleanField()
 
+    stars = models.ManyToManyField(User, related_name='starred_experiences', blank=True)
+
+    def total_stars(self):
+        return self.stars.count()
+
     def __str__(self):
         return f"{self.title} - {self.organization}"
 
@@ -69,9 +74,11 @@ class Project(models.Model):
     tech_stack = models.CharField(max_length=255)
     project_url = models.URLField(blank=True)
     project_image_url = models.URLField(blank=True, max_length=500)
-    starred_by = models.ManyToManyField(
-        User, related_name="starred_projects", blank=True
-    )
+
+    stars = models.ManyToManyField(User, related_name='starred_projects', blank=True)
+
+    def total_stars(self):
+        return self.stars.count()
 
     def __str__(self):
         return self.title

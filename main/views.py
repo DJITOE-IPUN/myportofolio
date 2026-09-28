@@ -1,16 +1,20 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
-from django.core import serializers
-from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
+from django.core import serializers
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 
 from main.models import Education, Project, Award, Experience
 from main.forms import EducationForm, ProjectForm, AwardsForm
 
 import datetime
+
+def check_is_editor(user):
+    return user.is_authenticated and (user.groups.filter(name='Editor').exists() or user.is_superuser)
 
 # --- VIEWS UTAMA ---
 def show_main(request):
@@ -66,24 +70,30 @@ def show_projects(request):
 
 
 # --- CREATE VIEWS ---
+@login_required(login_url='main:login')
 def create_education(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
     form = EducationForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_education')
     return render(request, "education_form.html", {'form': form, 'title': 'Tambah Riwayat Pendidikan'})
 
-@login_required(login_url="/login/")
+@login_required(login_url='main:login')
 def create_project(request):
     if not request.user.is_superuser:
-        raise PermissionDenied
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
     form = ProjectForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_projects')
     return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
 
+@login_required(login_url='main:login')
 def create_award(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
     form = AwardsForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
@@ -92,7 +102,10 @@ def create_award(request):
 
 
 # --- EDIT / UPDATE VIEWS ---
+@login_required(login_url='main:login')
 def edit_education(request, id):
+    if not check_is_editor(request.user):
+        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
     edu = get_object_or_404(Education, pk=id)
     form = EducationForm(request.POST or None, instance=edu)
     if form.is_valid() and request.method == "POST":
@@ -100,7 +113,10 @@ def edit_education(request, id):
         return redirect('main:show_education')
     return render(request, "education_form.html", {'form': form, 'title': 'Ubah Riwayat Pendidikan'})
 
+@login_required(login_url='main:login')
 def edit_project(request, id):
+    if not check_is_editor(request.user):
+        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
     project = get_object_or_404(Project, pk=id)
     form = ProjectForm(request.POST or None, instance=project)
     if form.is_valid() and request.method == "POST":
@@ -108,7 +124,10 @@ def edit_project(request, id):
         return redirect('main:show_projects')
     return render(request, "projects_form.html", {'form': form, 'title': 'Ubah Proyek'})
 
+@login_required(login_url='main:login')
 def edit_award(request, id):
+    if not check_is_editor(request.user):
+        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
     award = get_object_or_404(Award, pk=id)
     form = AwardsForm(request.POST or None, instance=award)
     if form.is_valid() and request.method == "POST":
@@ -118,22 +137,31 @@ def edit_award(request, id):
 
 
 # --- DELETE VIEWS ---
+@login_required(login_url='main:login')
+@require_POST
 def delete_education(request, id):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
     if request.method == "POST":
         edu = get_object_or_404(Education, pk=id)
         edu.delete()
     return redirect('main:show_education')
 
-@login_required(login_url="/login/")
+@login_required(login_url='main:login')
+@require_POST
 def delete_project(request, id):
     if not request.user.is_superuser:
-        raise PermissionDenied
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
     if request.method == "POST":
         project = get_object_or_404(Project, pk=id)
         project.delete()
     return redirect('main:show_projects')
 
+@login_required(login_url='main:login')
+@require_POST
 def delete_award(request, id):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
     if request.method == "POST":
         award = get_object_or_404(Award, pk=id)
         award.delete()
@@ -202,14 +230,14 @@ def logout_user(request):
     response.delete_cookie('last_login')
     return response
 
-@login_required(login_url="/login/")
-def toggle_star(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
 
-    if request.method == "POST":
-        if request.user in project.starred_by.all():
-            project.starred_by.remove(request.user)
-        else:
-            project.starred_by.add(request.user)
-
-    return redirect("main:show_projects")
+# --- TOGGLE STAR (Logged-in User) ---
+@login_required(login_url='main:login')
+@require_POST
+def toggle_star(request, id):
+    project = get_object_or_404(Project, pk=id)
+    if project.stars.filter(id=request.user.id).exists():
+        project.stars.remove(request.user)
+    else:
+        project.stars.add(request.user)
+    return redirect('main:show_projects')
