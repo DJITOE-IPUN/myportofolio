@@ -56,15 +56,11 @@ def show_awards(request):
 
 def show_projects(request):
     title_query = request.GET.get('title', '')
-    if title_query:
-        project_list = Project.objects.filter(title__icontains=title_query)
-    else:
-        project_list = Project.objects.all()
-        
     context = {
         'name': 'Michael Evan Putra Nugroho',
-        'project_list': project_list,
         'title_query': title_query,
+        'is_editor': check_is_editor(request.user),
+        "form": ProjectForm(),
     }
     return render(request, "projects.html", context)
 
@@ -89,6 +85,24 @@ def create_project(request):
         form.save()
         return redirect('main:show_projects')
     return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
+
+@require_POST
+def create_project_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
+            status=403,
+        )
+
+    form = ProjectForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 @login_required(login_url='main:login')
 def create_award(request):
@@ -241,3 +255,34 @@ def toggle_star(request, id):
     else:
         project.stars.add(request.user)
     return redirect('main:show_projects')
+
+
+def get_projects_json(request):
+    title_query = request.GET.get("title", "").strip()
+    projects = Project.objects.prefetch_related('stars').all()
+
+    if title_query:
+        projects = projects.filter(title__icontains=title_query)
+
+    # Konstruksi data JSON secara manual agar bisa menyisipkan logika Star
+    data = []
+    for project in projects:
+        starred_users = project.stars.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        starred_by_names = ", ".join([u.username for u in starred_users])
+
+        data.append({
+            "pk": str(project.id),
+            "fields": {
+                "title": project.title,
+                "description": project.description,
+                "tech_stack": project.tech_stack,
+                "project_url": project.project_url,
+                "project_image_url": project.project_image_url,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+                "starred_by_names": starred_by_names,
+            }
+        })
+
+    return JsonResponse(data, safe=False)

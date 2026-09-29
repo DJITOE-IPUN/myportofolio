@@ -1,10 +1,11 @@
 from django.urls import path
 from main.views import (
     show_main, show_education, show_awards, show_projects, show_experience,
-    create_education, create_project, create_award,
+    create_education, create_project, create_project_ajax, create_award,
     edit_education, edit_project, edit_award,
     delete_education, delete_project, delete_award,
-    show_json_education, show_json_projects, show_json_awards, show_json_by_id, 
+    show_json_education, show_json_projects, show_json_awards, show_json_by_id,
+    get_projects_json,
     register, login_user, logout_user, toggle_star
 )
 
@@ -21,6 +22,7 @@ urlpatterns = [
     # Create Routes
     path('education/create/', create_education, name='create_education'),
     path('projects/create/', create_project, name='create_project'),
+    path("projects/add-ajax/", create_project_ajax, name="create_project_ajax"),
     path('awards/create/', create_award, name='create_award'),
 
     # Edit Routes
@@ -36,6 +38,7 @@ urlpatterns = [
     # JSON Data Delivery Routes
     path('json/education/', show_json_education, name='show_json_education'),
     path('json/projects/', show_json_projects, name='show_json_projects'),
+    path('json/projects/search/', get_projects_json, name='get_projects_json'),
     path('json/awards/', show_json_awards, name='show_json_awards'),
     path('json/<str:model_type>/<str:id>/', show_json_by_id, name='show_json_by_id'),
 
@@ -44,5 +47,5 @@ urlpatterns = [
     path("logout/", logout_user, name="logout"),
     
     path('experience/<uuid:id>/star/', toggle_star, name='toggle_star'),
-    path("projects/<uuid:project_id>/star/", toggle_star, name="toggle_star"),
+    path("projects/<uuid:id>/star/", toggle_star, name="toggle_star"),
 ]
