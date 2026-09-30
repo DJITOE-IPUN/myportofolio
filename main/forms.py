@@ -128,16 +128,24 @@ class ProjectForm(ModelForm):
         }
 
     def clean_title(self):
-        title = strip_tags(self.cleaned_data["title"]).strip()
-        if not title:
-            raise ValidationError("Nama proyek tidak boleh hanya berisi tag HTML.")
-        return title
-
-    def clean_tech_stack(self):
-        return strip_tags(self.cleaned_data["tech_stack"]).strip()
+        title = self.cleaned_data.get("title", "")
+        return strip_tags(title)
 
     def clean_description(self):
-        return strip_tags(self.cleaned_data["description"]).strip()
+        description = self.cleaned_data.get("description", "")
+        return strip_tags(description)
+
+    def clean_tech_stack(self):
+        tech_stack = self.cleaned_data.get("tech_stack", "")
+        return strip_tags(tech_stack)
+
+    def clean_project_url(self):
+        project_url = self.cleaned_data.get("project_url", "")
+        return strip_tags(project_url)
+
+    def clean_project_image_url(self):
+        project_image_url = self.cleaned_data.get("project_image_url", "")
+        return strip_tags(project_image_url)
 
 
 class AwardsForm(ModelForm):

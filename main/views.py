@@ -86,23 +86,26 @@ def create_project(request):
         return redirect('main:show_projects')
     return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
 
+@login_required(login_url='main:login')
 @require_POST
 def create_project_ajax(request):
     if not request.user.is_superuser:
-        return JsonResponse(
-            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
-            status=403,
-        )
+        return JsonResponse({
+            'error': '403 Forbidden: Hanya Pemilik Portofolio (Superuser) yang dapat menambah data.'
+        }, status=403)
 
     form = ProjectForm(request.POST)
     if form.is_valid():
         project = form.save()
-        return JsonResponse(
-            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
-            status=201,
-        )
-
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+        return JsonResponse({
+            'message': f'Proyek "{project.title}" berhasil ditambahkan!',
+            'id': str(project.id)
+        }, status=201)
+    else:
+        return JsonResponse({
+            'error': 'Gagal menyimpan data. Periksa kembali formulir Anda.',
+            'errors': form.errors
+        }, status=400)
 
 @login_required(login_url='main:login')
 def create_award(request):
@@ -188,8 +191,37 @@ def show_json_education(request):
     return HttpResponse(serializers.serialize("json", data), content_type="application/json")
 
 def show_json_projects(request):
-    data = Project.objects.all()
-    return HttpResponse(serializers.serialize("json", data), content_type="application/json")
+    title_query = request.GET.get('title', '').strip()
+    
+    if title_query:
+        projects = Project.objects.filter(title__icontains=title_query)
+    else:
+        projects = Project.objects.all()
+
+    project_list = []
+    for p in projects:
+        # Cek apakah user saat ini memberi star pada project ini
+        is_starred = p.stars.filter(id=request.user.id).exists() if request.user.is_authenticated else False
+        
+        project_list.append({
+            'id': str(p.id),
+            'title': p.title,
+            'description': p.description,
+            'tech_stack': p.tech_stack,
+            'project_url': p.project_url or '',
+            'project_image_url': p.project_image_url or '',
+            'total_stars': p.stars.count(),
+            'is_starred': is_starred,
+        })
+
+    return JsonResponse({
+        'projects': project_list,
+        'user_permissions': {
+            'is_authenticated': request.user.is_authenticated,
+            'is_superuser': request.user.is_superuser if request.user.is_authenticated else False,
+            'is_editor': check_is_editor(request.user),
+        }
+    }, status=200)
 
 def show_json_awards(request):
     data = Award.objects.all()
