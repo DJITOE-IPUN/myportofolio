@@ -8,9 +8,9 @@
     <main>
         <section class="experience-section" id="projects"
              data-json-url="{% url 'main:get_projects_json' %}"
-             data-star-url-template="{% url 'main:toggle_star' %}"
-             data-edit-url-template="{% url 'main:edit_project' %}"
-             data-delete-url-template="{% url 'main:delete_project' %}"
+             data-star-url-template="{% url 'main:toggle_project_star' '00000000-0000-0000-0000-000000000000' %}"
+             data-edit-url-template="{% url 'main:edit_project' '00000000-0000-0000-0000-000000000000' %}"
+             data-delete-url-template="{% url 'main:delete_project' '00000000-0000-0000-0000-000000000000' %}"
              data-is-editor="{{ is_editor|yesno:'true,false' }}"
              data-is-superuser="{{ user.is_superuser|yesno:'true,false' }}">
             <div class="container">
@@ -55,7 +55,7 @@
     </main>
 
     {% if user.is_superuser %}
-        {% include "components/project_form_modal.html" %}
+        {% include "components/projects_form_modal.html" %}
     {% endif %}
     
     <script>
@@ -111,7 +111,7 @@
         // Dummy UUID digunakan untuk digantikan oleh ID asli dari data JSON
         const deleteUrl = "{% url 'main:delete_project' '00000000-0000-0000-0000-000000000000' %}"
             .replace('00000000-0000-0000-0000-000000000000', projectId);
-        const starUrl = "{% url 'main:toggle_star' '00000000-0000-0000-0000-000000000000' %}"
+        const starUrl = "{% url 'main:toggle_project_star' '00000000-0000-0000-0000-000000000000' %}"
             .replace('00000000-0000-0000-0000-000000000000', projectId);
 
         const deleteHtml = IS_SUPERUSER 

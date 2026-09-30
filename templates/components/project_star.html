@@ -1,6 +1,6 @@
 <div class="project-star-component">
     {% if user.is_authenticated %}
-        <form method="POST" action="{% url 'main:toggle_star' project.id %}">
+        <form method="POST" action="{% url 'main:toggle_project_star' project.id %}">
             {% csrf_token %}
             <button type="submit" class="button button-star">
                 {% if user in project.stars.all %}

@@ -46,6 +46,6 @@ urlpatterns = [
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),
     
-    path('experience/<uuid:id>/star/', toggle_star, name='toggle_star'),
-    path("projects/<uuid:id>/star/", toggle_star, name="toggle_star"),
+    path('experience/<uuid:id>/star/', toggle_star, name='toggle_experience_star'),
+    path("projects/<uuid:id>/star/", toggle_star, name="toggle_project_star"),
 ]
