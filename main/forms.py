@@ -76,6 +76,25 @@ class EducationForm(ModelForm):
             ),
         }
 
+    def clean_institution(self):
+        institution = self.cleaned_data.get("institution", "")
+        return strip_tags(institution)
+
+    def clean_degree(self):
+        degree = self.cleaned_data.get("degree", "")
+        return strip_tags(degree)
+
+    def clean_field_of_study(self):
+        field_of_study = self.cleaned_data.get("field_of_study", "")
+        return strip_tags(field_of_study)
+
+    def clean_start_year(self):
+        start_year = self.cleaned_data.get("start_year", "")
+        return strip_tags(str(start_year))
+
+    def clean_end_year(self):
+        end_year = self.cleaned_data.get("end_year", "")
+        return strip_tags(str(end_year))
 
 class ProjectForm(ModelForm):
     class Meta:

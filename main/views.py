@@ -39,10 +39,13 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_education(request):
-    education_list = Education.objects.all()
+    title_query = request.GET.get('title', '')
     context = {
         'name': 'Michael Evan Putra Nugroho',
-        'education_list': education_list,
+        'form': EducationForm(),
+        'title':title_query,
+        'is_editor': check_is_editor(request.user),
+        
     }
     return render(request, "education.html", context)
 
@@ -75,6 +78,28 @@ def create_education(request):
         form.save()
         return redirect('main:show_education')
     return render(request, "education_form.html", {'form': form, 'title': 'Tambah Riwayat Pendidikan'})
+
+@login_required(login_url='main:login')
+@require_POST
+def create_education_ajax(request):
+    # Otorisasi ketat di sisi server
+    if not request.user.is_superuser:
+        return JsonResponse({
+            'error': '403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.'
+        }, status=403)
+
+    form = EducationForm(request.POST)
+    if form.is_valid():
+        edu = form.save()
+        return JsonResponse({
+            'message': f'Riwayat pendidikan di "{edu.institution}" berhasil ditambahkan!',
+            'id': str(edu.id)
+        }, status=201)
+    else:
+        return JsonResponse({
+            'error': 'Gagal menyimpan data. Periksa kembali formulir Anda.',
+            'errors': form.errors
+        }, status=400)
 
 @login_required(login_url='main:login')
 def create_project(request):
@@ -187,8 +212,38 @@ def delete_award(request, id):
 
 # --- JSON DATA DELIVERY ENDPOINTS ---
 def show_json_education(request):
-    data = Education.objects.all()
-    return HttpResponse(serializers.serialize("json", data), content_type="application/json")
+    query = request.GET.get('institution', '').strip()
+    
+    if query:
+        educations = Education.objects.filter(institution__icontains=query)
+    else:
+        educations = Education.objects.all()
+
+    education_list = []
+    for edu in educations:
+        # Cek apakah user saat ini memberi star pada data education ini
+        is_starred = edu.stars.filter(id=request.user.id).exists() if request.user.is_authenticated and hasattr(edu, 'stars') else False
+        total_stars = edu.stars.count() if hasattr(edu, 'stars') else 0
+        
+        education_list.append({
+            'id': str(edu.id),
+            'institution': edu.institution,
+            'degree': edu.get_degree_display() if hasattr(edu, 'get_degree_display') else edu.degree,
+            'field_of_study': edu.field_of_study,
+            'start_year': str(edu.start_year),
+            'end_year': str(edu.end_year),
+            'total_stars': total_stars,
+            'is_starred': is_starred,
+        })
+
+    return JsonResponse({
+        'educations': education_list,
+        'user_permissions': {
+            'is_authenticated': request.user.is_authenticated,
+            'is_superuser': request.user.is_superuser if request.user.is_authenticated else False,
+            'is_editor': check_is_editor(request.user),
+        }
+    }, status=200)
 
 def show_json_projects(request):
     title_query = request.GET.get('title', '').strip()
