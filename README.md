@@ -1,24 +1,59 @@
-Nama    :   Michael Evan Putra Nugroho
+# Portfolio Website - Tugas Individu Pemrograman Berbasis Platform
 
-NPM     :   2506616674
+**Nama**    : Michael Evan Putra Nugroho  
+**NPM**     : 2506616674  
+**Kelas**   : PBP C
 
-Kelas   :   PBP C
+---
 
-# Portfolio Website
+## Cara Menjalankan Proyek Secara Lokal (Setup Guide)
+
+1. **Clone Repositori & Masuk ke Direktori**
+   ```bash
+   git clone https://github.com/DJITOE-IPUN/MYPORTOFOLIO.git
+   cd MYPORTOFOLIO
+   ```
+
+2. **Aktifkan Virtual Environment**
+   - **Windows**:
+     ```bash
+     env-windows\Scripts\activate
+     ```
+   - **macOS / Linux**:
+     ```bash
+     source env-linux/bin/activate
+     ```
+
+3. **Instal Dependensi & Jalankan Migrasi Basis Data**
+   ```bash
+   pip install -r requirements.txt
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
+
+4. **Buat Superuser (Pemilik Portofolio)**
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+5. **Jalankan Unit Test**
+   ```bash
+   python manage.py test
+   ```
+
+6. **Jalankan Development Server**
+   ```bash
+   python manage.py runserver
+   ```
+   Akses aplikasi pada peramban melalui alamat `[http://127.0.0.1:8000/](http://127.0.0.1:8000/)`.
+
+---
 
 ## Ringkasan Perubahan 1 (Tugas 1)
 Pada Tugas 1 ini, beberapa pembaruan utama yang dilakukan meliputi:
 - **Pembaruan Data Diri**: Mengganti seluruh data contoh dari Tutorial 01 pada section *About Me* dengan identitas asli (Nama: Michael Evan Putra Nugroho, NPM: 2506616674, foto profil, dan bio ringkas).
 - **Penambahan Section "Experiences"**: Menambahkan section baru dengan elemen semantik HTML5 (`<section>` dan `<article>`) yang berisi 8 riwayat pengalaman organisasi dan kepanitiaan riil.
 - **Kustomisasi Tema & Styling CSS3**: Merombak total visual halaman dari *template* bawaan menjadi tema *Aviation & Tactical Tech (Dark Mode)* menggunakan variabel CSS `:root`, font *Space Grotesk* dan *Fira Code*, serta layout Flexbox yang responsif.
-
----
-
-## Cara Menjalankan Proyek
-1. Pastikan Python 3 dan Virtual Environment sudah aktif.
-2. Jalankan perintah server lokal Django di terminal:
-   ```bash
-   python manage.py runserver
 
 ---
 
@@ -302,3 +337,86 @@ Dalam proses pengembangan Tugas 4, ditemukan 3 keterbatasan AI yang berhasil dii
 
 ##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
 Seluruh penambahan skema ORM `stars`, pembuatan logika *helper authorization* di `views.py`, penyusunan komponen UI DTL `project_star.html`, hingga penyelarasan 23 kasus uji unit pada `main/tests.py` telah diverifikasi dan dites 100% secara manual di lingkungan lokal.
+
+---
+
+### Tugas 5: Web Interactivity with JavaScript
+
+#### Ringkasan Perubahan Tugas 5
+Pada Tugas 5, dikembangkan interaktivitas dinamis berbasis JavaScript dan AJAX secara *end-to-end* pada modul **Education**:
+
+1. **Pengambilan Data Asinkron via AJAX (`fetch()`)**:
+   - Halaman `education.html` kini hanya merender kerangka awal HTML, lalu mengambil daftar data riwayat pendidikan secara asinkron dari *endpoint* JSON (`/json/education/`) menggunakan `fetch()` tanpa melakukan *reload* halaman.
+2. **Endpoint JSON Kustom & Informasi Star**:
+   - Fungsi `show_json_education` pada `views.py` mengembalikan respons `JsonResponse` berisi daftar objek `Education`, total *star*, serta boolean status `is_starred` sesuai akun pengguna yang sedang login.
+3. **Pencarian Real-Time dengan Debouncing**:
+   - Mengimplementasikan pencarian data berdasarkan nama institusi/universitas secara langsung via AJAX.
+   - Dilengkapi fungsi penundaan eksekusi (*debouncing* 300ms) agar *request* HTTP pencarian hanya dikirimkan setelah pengguna berhenti mengetik di kolom pencarian.
+4. **Penambahan Data via Modal & AJAX POST**:
+   - Menyediakan formulir tambah data pendidikan di dalam modal interaktif.
+   - View `create_education_ajax` memvalidasi input via `EducationForm` (`ModelForm`) dan mengembalikan kode status HTTP yang sesuai (`201 Created`, `400 Bad Request`, `403 Forbidden`).
+   - Permintaan POST dilindungi dengan token CSRF (`X-CSRFToken`) dan memperbarui tampilan daftar data pada DOM secara langsung tanpa *reload*.
+5. **Indikator Status UI & Notifikasi Toast**:
+   - Menyediakan tampilan *loading state* (spinner), *empty state* (pesan data kosong), serta *error state* jika koneksi *fetch* gagal.
+   - Menampilkan notifikasi Toast saat data berhasil ditambahkan maupun ketika terjadi kesalahan validasi dari server.
+6. **Proteksi Cross-Site Scripting (XSS)**:
+   - **Client-Side**: Memperketat penyisipan teks dinamis ke HTML dengan fungsi helper `escapeHtml()`.
+   - **Server-Side**: Menerapkan fungsi `strip_tags()` pada metode `clean_<field>()` di `EducationForm` untuk membersihkan tag HTML/skrip berbahaya sebelum disimpan ke basis data.
+
+---
+
+#### Pertanyaan Reflektif
+
+1. **Jelaskan apa itu debouncing dan mengapa teknik ini penting diterapkan pada fitur pencarian yang menggunakan AJAX!**
+   - **Penjelasan Debouncing**: Debouncing adalah teknik pemrograman untuk menunda eksekusi suatu fungsi hingga sejeda waktu tertentu telah berlalu sejak fungsi tersebut terakhir kali dipanggil.
+   - **Pentingnya pada AJAX Search**: Saat pengguna mengetik di kolom pencarian, tanpa debouncing setiap ketukan tombol (*keystroke*) akan memicu satu permintaan HTTP AJAX ke server. Hal ini menyebabkan pemborosan *bandwidth*, beban kerja berlebih pada server, serta potensi *race condition* (urutan respon yang datang tidak sesuai urutan ketikan). Dengan debouncing (misal delay 300ms), *request* AJAX hanya dikirim satu kali setelah pengguna berhenti mengetik.
+
+2. **Jelaskan fungsi dari penggunaan `await` ketika kita menggunakan `fetch()`! Apa yang akan terjadi jika kita tidak menggunakan `await`?**
+   - **Fungsi `await`**: Kata kunci `await` digunakan di dalam fungsi `async` untuk menghentikan sementara eksekusi kode hingga proses asinkron dari `fetch()` selesai dan mengembalikan objek `Response` (*Promise* ter-resolve).
+   - **Dampak Tanpa `await`**: Jika tidak menggunakan `await`, variabel penampung tidak akan berisi objek respon HTTP melainkan objek `Promise` yang masih berstatus *pending*. Akibatnya, pemanggilan fungsi berikutnya (seperti `.json()`) akan memicu kesalahan (*TypeError*) atau mengembalikan nilai `undefined` karena data dari server belum selesai diunduh.
+
+3. **Jelaskan apa itu serangan XSS (Cross-Site Scripting) dan mengapa data yang ditampilkan melalui AJAX/JavaScript lebih rentan terhadap serangan ini daripada data yang ditampilkan langsung melalui template Django!**
+   - **Pengertian XSS**: XSS adalah celah keamanan web di mana peretas berhasil menyisipkan skrip berbahaya (seperti kode JavaScript atau tag HTML berbisa) ke dalam aplikasi, yang kemudian dieksekusi oleh peramban pengguna lain.
+   - **Alasan AJAX/JS Lebih Rentan**: Pada manipulasi DOM secara langsung di JavaScript (seperti penggunaan `.innerHTML`), peramban akan mengeksekusi string masukan secara mentah. Jika data mengandung skrip jahat, peramban langsung menjalankannya. Sebaliknya, template Django secara bawaan memiliki mekanisme *auto-escaping* otomatis yang mengubah karakter khusus HTML (seperti `<`, `>`, `&`, `"`, `'`) menjadi entitas aman sebelum dirender ke dokumen HTML.
+
+---
+
+#### AI Disclosure
+
+* **Tools AI yang Digunakan**: Gemini (Google AI).
+* **Link / Public Share Log Chat**: ristek.link/AI-chat-log-tugas-5
+
+##### 1. Strategi Prompting & Arsitektur Interaksi
+Proses pengerjaan Tugas 5 menerapkan metode **Iterative System-Constrained Prompting**. Pengembang menetapkan instruksi dan parameter ketat:
+* **Target Module Isolation**: Mengalihkan target penerapan AJAX dari modul `Projects` (bawaan tutorial) ke modul `Education` agar memenuhi ketentuan resmi spesifikasi Tugas 5.
+* **Security & Authorization First**: Mengharuskan otorisasi ketat di sisi server (pengecekan `is_superuser` mengembalikan status HTTP `403 Forbidden`), penanganan token CSRF pada *header* permintaan `fetch()`, serta proteksi XSS berlapis di tingkat server dan klien.
+
+##### 2. Kronologi Log Prompting Utama
+
+| Tahap | Tujuan Prompt | Luaran AI (*Output*) | Tindakan & Evaluasi Pengembang |
+| --- | --- | --- | --- |
+| **01** | Sanitasi XSS Server-Side di `main/forms.py`. | Penambahan method `clean_<field>` dengan `strip_tags()` pada `EducationForm`. | **Disetujui**: Memastikan seluruh masukan string dibersihkan dari tag HTML sebelum masuk ke database. |
+| **02** | Pembuatan endpoint JSON & view AJAX POST di `main/views.py`. | View `show_json_education` (pencarian + info star) dan `create_education_ajax`. | **Koreksi Manual**: Memastikan pemeriksaan otorisasi `request.user.is_superuser` mengembalikan status HTTP 403 jika ditolak. |
+| **03** | Pendaftaran rute URL AJAX di `main/urls.py`. | Rute `/json/education/` dan `/education/create-ajax/`. | **Disetujui**: Menjaga konsistensi rute API berstruktur. |
+| **04** | Pembuatan UI Kerangka HTML & Skrip JavaScript di `templates/education.html`. | Modal form, indikator UI, fungsi `fetchEducation()`, *debounced search*, submit AJAX POST, & helper `escapeHtml()`. | **Koreksi Manual**: Mengintegrasikan pengambilan token CSRF dari cookie (`getCookie('csrftoken')`) untuk disisipkan pada *header* `X-CSRFToken` saat *fetch* POST. |
+
+##### 3. Analisis Keterbatasan AI
+
+Dalam proses pengembangan Tugas 5, ditemukan 3 keterbatasan AI yang berhasil diidentifikasi dan dikoreksi secara manual (*Human-in-the-Loop*):
+
+1. **Pengalihan Modul Target (Tutorial Constraint vs Assignment Requirement)**
+   - *Keterbatasan AI*: Pada draf awal, AI langsung menyarankan implementasi AJAX pada modul `Projects`. Padahal, aturan resmi Tugas 5 melarang penggunaan modul `Projects` karena modul tersebut sudah digunakan sebagai materi latihan Tutorial 05.
+   - *Perbaikan Manual*: Pengembang mengintervensi alur kerja dan mengalihkan seluruh arsitektur AJAX, modal form, *debounced search*, serta sanitasi XSS secara *end-to-end* ke modul `Education`.
+
+2. **Penanganan Token CSRF pada AJAX POST (`403 Forbidden` Error)**
+   - *Keterbatasan AI*: AI sempat lupa menyertakan *header* `X-CSRFToken` pada pemanggilan `fetch()` POST di skrip JavaScript.
+   - *Dampak*: Django menolak permintaan penambahan data via AJAX POST dengan galat HTTP `403 Forbidden` (CSRF verification failed).
+   - *Perbaikan Manual*: Pengembang menambahkan fungsi helper `getCookie('csrftoken')` pada JavaScript dan menyertakan token CSRF tersebut ke dalam *header* permintaan `fetch()`.
+
+3. **Celah Keamanan XSS Client-Side pada Manipulasi DOM**
+   - *Keterbatasan AI*: Skrip JavaScript yang dihasilkan AI awalnya menyisipkan string data hasil *fetch* JSON secara langsung ke properti `innerHTML` tanpa proses *escaping*.
+   - *Dampak*: Jika data di basis data mengandung karakter khusus HTML, peramban akan mengeksekusinya sebagai elemen HTML/JS aktif, memicu celah Cross-Site Scripting (XSS).
+   - *Perbaikan Manual*: Pengembang membuat fungsi sanitasi `escapeHtml()` pada JavaScript untuk mengubah karakter sensitif (`<`, `>`, `&`, `"`, `'`) menjadi entitas HTML aman sebelum dimasukkan ke dalam elemen DOM.
+
+##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
+Seluruh sanitasi XSS server-side pada `EducationForm`, pembuatan *endpoint* JSON & AJAX view di `main/views.py`, rute URL di `main/urls.py`, pembuatan kerangka UI modal form & toast notification, penulisan fungsi JS `fetch()`, *debounced search*, *CSRF token handling*, hingga sanitasi client-side `escapeHtml()` di `templates/education.html` telah diverifikasi, diuji, dan dipastikan berjalan 100% stabil di lingkungan lokal.

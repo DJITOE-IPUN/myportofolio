@@ -76,6 +76,25 @@ class EducationForm(ModelForm):
             ),
         }
 
+    def clean_institution(self):
+        institution = self.cleaned_data.get("institution", "")
+        return strip_tags(institution)
+
+    def clean_degree(self):
+        degree = self.cleaned_data.get("degree", "")
+        return strip_tags(degree)
+
+    def clean_field_of_study(self):
+        field_of_study = self.cleaned_data.get("field_of_study", "")
+        return strip_tags(field_of_study)
+
+    def clean_start_year(self):
+        start_year = self.cleaned_data.get("start_year", "")
+        return strip_tags(str(start_year))
+
+    def clean_end_year(self):
+        end_year = self.cleaned_data.get("end_year", "")
+        return strip_tags(str(end_year))
 
 class ProjectForm(ModelForm):
     class Meta:
@@ -128,16 +147,24 @@ class ProjectForm(ModelForm):
         }
 
     def clean_title(self):
-        title = strip_tags(self.cleaned_data["title"]).strip()
-        if not title:
-            raise ValidationError("Nama proyek tidak boleh hanya berisi tag HTML.")
-        return title
-
-    def clean_tech_stack(self):
-        return strip_tags(self.cleaned_data["tech_stack"]).strip()
+        title = self.cleaned_data.get("title", "")
+        return strip_tags(title)
 
     def clean_description(self):
-        return strip_tags(self.cleaned_data["description"]).strip()
+        description = self.cleaned_data.get("description", "")
+        return strip_tags(description)
+
+    def clean_tech_stack(self):
+        tech_stack = self.cleaned_data.get("tech_stack", "")
+        return strip_tags(tech_stack)
+
+    def clean_project_url(self):
+        project_url = self.cleaned_data.get("project_url", "")
+        return strip_tags(project_url)
+
+    def clean_project_image_url(self):
+        project_image_url = self.cleaned_data.get("project_image_url", "")
+        return strip_tags(project_image_url)
 
 
 class AwardsForm(ModelForm):

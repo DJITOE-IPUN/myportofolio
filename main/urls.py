@@ -1,6 +1,6 @@
 from django.urls import path
 from main.views import (
-    show_main, show_education, show_awards, show_projects, show_experience,
+    create_education_ajax, show_main, show_education, show_awards, show_projects, show_experience,
     create_education, create_project, create_project_ajax, create_award,
     edit_education, edit_project, edit_award,
     delete_education, delete_project, delete_award,
@@ -21,8 +21,9 @@ urlpatterns = [
 
     # Create Routes
     path('education/create/', create_education, name='create_education'),
+    path('education/create-ajax/', create_education_ajax, name='create_education_ajax'),
     path('projects/create/', create_project, name='create_project'),
-    path("projects/add-ajax/", create_project_ajax, name="create_project_ajax"),
+    path("projects/create-ajax/", create_project_ajax, name="create_project_ajax"),
     path('awards/create/', create_award, name='create_award'),
 
     # Edit Routes
