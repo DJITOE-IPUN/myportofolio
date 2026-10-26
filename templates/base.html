@@ -1,43 +1,157 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-clearance="classified">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+        /* Afterburner — runs before first paint.
+           1. Picks the clearance mode: the visitor's saved choice, otherwise Unclassified
+              on touch devices or with reduced motion, Classified everywhere else.
+           2. Decides whether this is the first visit (cold start).
+           3. Arms a failsafe so the page never stays dark if afterburner.js fails to load. */
+        (function () {
+            var d = document.documentElement, mode = null, cold = false;
+            var mq = function (q) { return !!(window.matchMedia && window.matchMedia(q).matches); };
+            d.classList.add('ab-js');
+            try { mode = localStorage.getItem('ab-clearance'); } catch (e) {}
+            if (mode !== 'classified' && mode !== 'unclassified') {
+                mode = (mq('(prefers-reduced-motion: reduce)') || mq('(hover: none) and (pointer: coarse)'))
+                    ? 'unclassified' : 'classified';
+            }
+            d.setAttribute('data-clearance', mode);
+            try { cold = mode === 'classified' && !localStorage.getItem('ab-cold-start'); } catch (e) {}
+            if (cold) d.classList.add('ab-cold');
+            setTimeout(function () {
+                if (!window.__afterburner) {
+                    d.classList.remove('ab-cold');
+                    d.classList.add('ab-nojs', 'ab-powered');
+                }
+            }, 3000);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/afterburner.css' %}">
+    <script src="{% static 'js/afterburner.js' %}" defer></script>
     {% block meta %} {% endblock meta %}
 </head>
 
-<body>
-    <header class="site-header">
-        <div class="container">
-            <a href="{% url 'main:show_main' %}" class="brand">{{ name }}</a>
-            <nav>
-                <a href="{% url 'main:show_main' %}">Profile</a>
-                <a href="{% url 'main:show_experience' %}">Experience</a>
-                <a href="{% url 'main:show_education' %}">Education</a>
-                <a href="{% url 'main:show_awards' %}">Awards</a>
-                <a href="{% url 'main:show_projects' %}">Projects</a>
+<body class="{% block body_class %}ab-page{% endblock body_class %}">
+    {% with here=request.resolver_match.url_name %}
+    <a class="ab-skip" href="#ab-content">Skip to content</a>
+
+    <!-- Cold start: first visit only, Classified only, skippable -->
+    <div class="ab-coldstart" id="ab-coldstart">
+        <div class="ab-coldstart-panel">
+            <p class="ab-coldstart-id">MFD-1 &middot; Cold</p>
+            <button type="button" class="ab-start" id="ab-start">Start</button>
+            <p class="ab-coldstart-hint">Press any key</p>
+            <span class="ab-coldstart-timer" aria-hidden="true"><span></span></span>
+        </div>
+    </div>
+    <div class="ab-powerup" aria-hidden="true"></div>
+
+    <canvas class="ab-canvas" id="ab-canvas" aria-hidden="true"></canvas>
+
+    <!-- Reticle cursor (desktop, Classified) -->
+    <div class="ab-reticle" id="ab-reticle" aria-hidden="true"></div>
+    <div class="ab-lock" id="ab-lock" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+    <a href="{% url 'main:show_main' %}" class="ab-brand"><span class="ab-brand-text">{{ name|default:"Michael Evan Putra Nugroho" }}</span></a>
+
+    <div class="ab-controls">
+        <button type="button" class="ab-clearance" id="ab-clearance" role="switch" aria-checked="true" aria-label="Classified mode">
+            <span class="ab-clearance-label" aria-hidden="true">Clr</span>
+            <span class="ab-clearance-track" aria-hidden="true"><span class="ab-clearance-knob"></span></span>
+            <span class="ab-clearance-state" aria-hidden="true">
+                <span class="ab-when-classified">Classified</span>
+                <span class="ab-when-unclassified">Unclassified</span>
+            </span>
+        </button>
+        <button type="button" class="ab-menu-toggle" id="ab-menu-toggle" aria-expanded="false" aria-controls="ab-overlay" aria-label="Open menu">
+            <span class="ab-menu-label">Menu</span>
+            <span class="ab-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+        </button>
+    </div>
+
+    <!-- Full-screen menu: the plain way around the site -->
+    <div class="ab-overlay" id="ab-overlay" aria-hidden="true" inert>
+        <nav class="ab-overlay-nav" aria-label="Main">
+            <a href="{% url 'main:show_main' %}"{% if here == 'show_main' %} aria-current="page"{% endif %}><span class="ab-overlay-index">01</span>Profile</a>
+            <a href="{% url 'main:show_experience' %}"{% if here == 'show_experience' %} aria-current="page"{% endif %}><span class="ab-overlay-index">02</span>Experience</a>
+            <a href="{% url 'main:show_education' %}"{% if here == 'show_education' %} aria-current="page"{% endif %}><span class="ab-overlay-index">03</span>Education</a>
+            <a href="{% url 'main:show_awards' %}"{% if here == 'show_awards' %} aria-current="page"{% endif %}><span class="ab-overlay-index">04</span>Awards</a>
+            <a href="{% url 'main:show_projects' %}"{% if here == 'show_projects' %} aria-current="page"{% endif %}><span class="ab-overlay-index">05</span>Projects</a>
+        </nav>
+        <div class="ab-overlay-foot">
+            <span class="ab-overlay-auth">
                 {% if user.is_authenticated %}
-                    <span class="nav-user">{{ user.username }}</span>
+                    Signed in as <span class="ab-overlay-user">{{ user.username }}</span>
                     <a href="{% url 'main:logout' %}">Logout</a>
                 {% else %}
                     <a href="{% url 'main:login' %}">Login</a>
                     <a href="{% url 'main:register' %}">Register</a>
                 {% endif %}
-            </nav>
+            </span>
+            <span class="ab-overlay-links">
+                <a href="https://github.com/DJITOE-IPUN" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href="mailto:michaelevanpn@gmail.com">Email</a>
+            </span>
         </div>
-    </header>
-    {% block content %} {% endblock content %}
+    </div>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>&copy; 2026 {{ name }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
+    <!-- Social edge dock -->
+    <aside class="ab-edge-dock" aria-label="Social links">
+        <span class="ab-edge-label">Comms</span>
+        <a href="https://github.com/DJITOE-IPUN" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .3.2.66.79.55A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.28 2.38 4.28 5.47v6.27zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+        </a>
+        <a href="mailto:michaelevanpn@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="1.5"/><path d="M3 6l9 7 9-7"/></svg>
+        </a>
+    </aside>
+
+    <!-- HUD altitude ladder: filled in by afterburner.js from [data-ab-waypoint] sections -->
+    <nav class="ab-ladder" id="ab-ladder" aria-label="Page sections" hidden></nav>
+
+    <p class="ab-sr" id="ab-announce" aria-live="polite"></p>
+
+    <div id="ab-content" tabindex="-1">
+        {% block content %} {% endblock content %}
+    </div>
+
+    <footer class="ab-footer" data-ab-waypoint="Sign-off">
+        <div class="ab-wrap">
+            <p class="ab-footer-signature">Signal clear. Standing by.</p>
+            <div class="ab-social-row">
+                <a href="https://github.com/DJITOE-IPUN" class="ab-social" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .3.2.66.79.55A10.52 10.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+                </a>
+                <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" class="ab-social" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.28 2.38 4.28 5.47v6.27zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+                </a>
+                <a href="mailto:michaelevanpn@gmail.com" class="ab-social" aria-label="Email">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="1.5"/><path d="M3 6l9 7 9-7"/></svg>
+                </a>
+            </div>
+            <p class="ab-footer-auth">
+                {% if user.is_authenticated %}
+                    Signed in as {{ user.username }} &middot; <a href="{% url 'main:logout' %}">Logout</a>
+                {% else %}
+                    <a href="{% url 'main:login' %}">Login</a> &middot; <a href="{% url 'main:register' %}">Register</a>
+                {% endif %}
+            </p>
+            <p class="ab-footer-copy">&copy; 2026 {{ name|default:"Michael Evan Putra Nugroho" }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
         </div>
     </footer>
+    {% endwith %}
 
     {% include 'components/toast.html' %}
 </body>

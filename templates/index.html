@@ -1,44 +1,364 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block meta %}
     <title>Profile - {{ name }}</title>
+    <meta name="description" content="{{ name }} — Computer Science, Universitas Indonesia. {{ bio }}">
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-home{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="hero" id="profile">
-            <div class="container hero-grid">
-                <div class="hero-identity">
-                    <p class="hero-kicker">Computer Science &middot; Universitas Indonesia</p>
-                    <h1>{{ name }}</h1>
-                </div>
-                <div class="hero-photo">
-                    <div class="photo-block"></div>
-                    <img class="avatar" src="/static/img/MEPN.png" alt="Photo of {{ name }}">
-                </div>
-                <div class="hero-details">
-                    <p class="bio">{{ bio }}</p>
-                    <dl class="meta-list">
-                        <div class="meta-row">
-                            <dt>NPM</dt>
-                            <dd>{{ npm }}</dd>
-                        </div>
-                        <div class="meta-row">
-                            <dt>Program</dt>
-                            <dd>{{ study_program }}</dd>
-                        </div>
-                        <div class="meta-row">
-                            <dt>Sesi Terakhir Login</dt>
-                            <dd>{{ last_login }}</dd>
-                        </div>
+<main class="ab-deck" id="ab-main">
+
+    {# ================================================================== #}
+    {#  CLASSIFIED — the full Afterburner homepage                         #}
+    {# ================================================================== #}
+    <div class="ab-classified">
+
+        <!-- ========== HERO ========== -->
+        <section class="ab-hero" id="profile" data-ab-waypoint="Profile">
+            <div class="ab-wrap ab-hero-grid">
+
+                <div class="ab-hero-copy">
+                    <p class="ab-kicker ab-reveal" style="--d: 0s">Computer Science &middot; Universitas Indonesia</p>
+                    <h1 class="ab-hero-title ab-reveal" style="--d: .08s">{{ name }}</h1>
+                    <p class="ab-hero-bio ab-reveal" style="--d: .16s">{{ bio }}</p>
+                    <dl class="ab-hero-meta ab-reveal" style="--d: .24s">
+                        <div><dt>NPM</dt><dd>{{ npm }}</dd></div>
+                        <div><dt>Program</dt><dd>{{ study_program }}</dd></div>
+                        <div class="ab-hero-meta-wide"><dt>Last session</dt><dd>{{ last_login }}</dd></div>
                     </dl>
-                    <div class="social-links">
-                        <a href="https://github.com/DJITOE-IPUN" class="social-link" target="_blank" rel="noopener noreferrer">GitHub</a>
-                        <a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" class="social-link" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                        <a href="mailto:michaelevanpn@gmail.com" class="social-link">Email</a>
+                    <a href="{% url 'main:show_experience' %}" class="ab-cta ab-reveal" style="--d: .32s">
+                        View experience
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+                    </a>
+                </div>
+
+                <!-- Multifunction Display -->
+                <div class="ab-mfd ab-reveal" style="--d: .18s">
+                    <div class="ab-mfd-head">
+                        <span>MFD-1 <span class="ab-dim">// Afterburner</span></span>
+                        <span>Mode <span class="ab-hi">Profile</span></span>
+                    </div>
+
+                    <div class="ab-mfd-windows">
+                        <!-- W1: OPERATOR -->
+                        <figure class="ab-window ab-window-operator">
+                            <span class="ab-window-label">Operator</span>
+                            <span class="ab-window-id">W1</span>
+                            <img src="{% static 'img/operator.jpg' %}" width="720" height="900" alt="Photo of {{ name }}">
+                            <span class="ab-scanlines" aria-hidden="true"></span>
+                            <figcaption class="ab-window-caption">
+                                <span>JKT <span data-ab-clock>--:--:--</span> WIB</span>
+                                <span class="ab-live"><span class="ab-live-dot"></span>Live</span>
+                            </figcaption>
+                            <span class="ab-window-boot" style="--d: .1s" aria-hidden="true"></span>
+                        </figure>
+
+                        <!-- W2: SCAN — blips are the site's pages -->
+                        <div class="ab-window ab-window-scan">
+                            <span class="ab-window-label">Scan</span>
+                            <span class="ab-window-id">W2</span>
+                            <nav class="ab-radar" aria-label="Pages on the radar">
+                                <svg class="ab-radar-grid" viewBox="0 0 200 200" aria-hidden="true">
+                                    <circle cx="100" cy="100" r="96" />
+                                    <circle cx="100" cy="100" r="72" />
+                                    <circle cx="100" cy="100" r="48" />
+                                    <circle cx="100" cy="100" r="24" />
+                                    <line x1="100" y1="4" x2="100" y2="196" />
+                                    <line x1="4" y1="100" x2="196" y2="100" />
+                                    <circle class="ab-radar-ticks" cx="100" cy="100" r="93" transform="rotate(-90 100 100)" />
+                                    <circle class="ab-radar-ticks-major" cx="100" cy="100" r="92" transform="rotate(-90 100 100)" />
+                                </svg>
+                                <div class="ab-radar-sweep" aria-hidden="true"></div>
+
+                                <a class="ab-blip ab-blip--left" href="{% url 'main:show_experience' %}" data-ab-target="Experience" style="--a: 25; left: 66.5%; top: 14.7%;">
+                                    <span class="ab-blip-lock" aria-hidden="true"></span>
+                                    <span class="ab-blip-label">Experience <span class="ab-blip-count">{{ experience_list|length|stringformat:"02d" }}</span></span>
+                                </a>
+                                <a class="ab-blip ab-blip--left" href="{% url 'main:show_projects' %}" data-ab-target="Projects" style="--a: 110; left: 79.1%; top: 60.6%;">
+                                    <span class="ab-blip-lock" aria-hidden="true"></span>
+                                    <span class="ab-blip-label">Projects <span class="ab-blip-count">{{ project_list|length|stringformat:"02d" }}</span></span>
+                                </a>
+                                <a class="ab-blip" href="{% url 'main:show_education' %}" data-ab-target="Education" style="--a: 205; left: 33.1%; top: 86.2%;">
+                                    <span class="ab-blip-lock" aria-hidden="true"></span>
+                                    <span class="ab-blip-label">Education <span class="ab-blip-count">{{ education_list|length|stringformat:"02d" }}</span></span>
+                                </a>
+                                <a class="ab-blip" href="{% url 'main:show_awards' %}" data-ab-target="Awards" style="--a: 290; left: 26.5%; top: 41.5%;">
+                                    <span class="ab-blip-lock" aria-hidden="true"></span>
+                                    <span class="ab-blip-label">Awards <span class="ab-blip-count">{{ award_list|length|stringformat:"02d" }}</span></span>
+                                </a>
+
+                                <span class="ab-radar-lock" aria-hidden="true">Target locked<span data-ab-lock-name></span></span>
+                            </nav>
+                            <div class="ab-window-caption">
+                                <span>Targets 04</span>
+                                <span class="ab-caption-wide">Select to engage</span>
+                            </div>
+                            <span class="ab-window-boot" style="--d: .3s" aria-hidden="true"></span>
+                        </div>
+                    </div>
+
+                    <!-- W3: TELEMETRY + readouts -->
+                    <div class="ab-telemetry"{% if not telemetry %} data-ab-github-fallback="DJITOE-IPUN"{% endif %}>
+                        <div class="ab-trace">
+                            <div class="ab-trace-head">
+                                <span><span class="ab-trace-label">Telemetry</span> {% if telemetry %}{{ telemetry.weeks }} wk{% else %}offline{% endif %}</span>
+                                {% if telemetry %}
+                                    <span>Top speed <span class="ab-hi">{{ telemetry.top_speed }}</span>/wk{% if telemetry.top_week %} &middot; {{ telemetry.top_week|date:"d M"|upper }}{% endif %}</span>
+                                {% endif %}
+                            </div>
+                            <div class="ab-trace-plot">
+                                <svg class="ab-trace-svg" viewBox="0 0 600 64" preserveAspectRatio="none" aria-hidden="true">
+                                    <line class="ab-trace-grid" x1="0" y1="6" x2="600" y2="6" />
+                                    <line class="ab-trace-grid" x1="0" y1="32" x2="600" y2="32" />
+                                    <line class="ab-trace-grid" x1="0" y1="58" x2="600" y2="58" />
+                                    {% if telemetry %}
+                                        <polyline class="ab-trace-line" pathLength="1" points="{{ telemetry.trace_points }}" />
+                                        <line class="ab-trace-top" x1="{{ telemetry.top_x }}" y1="0" x2="{{ telemetry.top_x }}" y2="64" />
+                                    {% endif %}
+                                </svg>
+                                {% if telemetry %}
+                                    <span class="ab-trace-marker" style="left: {% widthratio telemetry.top_x 600 100 %}%; top: {% widthratio telemetry.top_y 64 100 %}%;" aria-hidden="true"></span>
+                                {% else %}
+                                    <span class="ab-trace-offline">No telemetry</span>
+                                {% endif %}
+                            </div>
+                            {% if telemetry %}
+                                <p class="ab-sr">{{ telemetry.total }} GitHub contributions in the last 12 months; busiest week {{ telemetry.top_speed }}.</p>
+                            {% endif %}
+                        </div>
+
+                        <dl class="ab-readouts">
+                            <div class="ab-readout">
+                                <dt>Contrib &middot; 12 mo</dt>
+                                <dd {% if telemetry %}data-ab-count="{{ telemetry.total }}"{% endif %}>{% if telemetry %}{{ telemetry.total|stringformat:"03d" }}{% else %}&mdash;{% endif %}</dd>
+                            </div>
+                            <div class="ab-readout">
+                                <dt>Repos</dt>
+                                <dd data-ab-field="repos" {% if telemetry %}data-ab-count="{{ telemetry.repos }}"{% endif %}>{% if telemetry %}{{ telemetry.repos|stringformat:"03d" }}{% else %}&mdash;{% endif %}</dd>
+                            </div>
+                            <div class="ab-readout">
+                                <dt>Followers</dt>
+                                <dd data-ab-field="followers" {% if telemetry %}data-ab-count="{{ telemetry.followers }}"{% endif %}>{% if telemetry %}{{ telemetry.followers|stringformat:"03d" }}{% else %}&mdash;{% endif %}</dd>
+                            </div>
+                            <div class="ab-readout">
+                                <dt>Last push</dt>
+                                <dd data-ab-field="pushed" {% if telemetry.pushed_at %}data-ab-ago="{{ telemetry.pushed_at|date:'c' }}"{% endif %}>{% if telemetry.pushed_at %}{{ telemetry.pushed_at|date:"d M"|upper }}{% else %}&mdash;{% endif %}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="ab-readout-status">
+                            <span class="ab-readout-src">Src github/DJITOE-IPUN<span data-ab-field="repo">{% if telemetry.last_repo %} &middot; Active <a href="{{ telemetry.last_repo_url }}" target="_blank" rel="noopener noreferrer">{{ telemetry.last_repo }}</a>{% endif %}</span></span>
+                            <span class="ab-link-state{% if telemetry %} is-ok{% endif %}" data-ab-link-state>{% if telemetry %}Link ok{% else %}Standby{% endif %}</span>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="ab-wrap ab-hero-foot">
+                <span>06&deg;21&prime;S 106&deg;49&prime;E &mdash; Depok, ID</span>
+                <span class="ab-hero-scroll">Scroll</span>
+            </div>
         </section>
-    </main>
+
+        <!-- ========== LOADOUT ========== -->
+        <section class="ab-section ab-loadout" id="loadout" data-ab-waypoint="Loadout" aria-labelledby="ab-loadout-title">
+            <div class="ab-wrap">
+                <header class="ab-section-head">
+                    <span class="ab-section-index">SEC-02</span>
+                    <h2 class="ab-section-title" id="ab-loadout-title">Loadout</h2>
+                    <span class="ab-section-note">04 slots</span>
+                </header>
+
+                <p class="ab-role">
+                    <span class="ab-role-label">Role</span>
+                    <span>Backend systems</span>
+                    <span>Secure-by-design engineering</span>
+                    <span>Tooling &amp; automation</span>
+                    <span>Focus: defence tech</span>
+                </p>
+
+                <div class="ab-slots">
+                    <article class="ab-slot">
+                        <div class="ab-slot-inner">
+                            <div class="ab-slot-top"><span class="ab-slot-type">Primary</span><span class="ab-slot-key">1</span></div>
+                            <h3 class="ab-slot-name">Python</h3>
+                            <p class="ab-slot-desc">Main language for coursework, scripting and the back end of this site.</p>
+                            <p class="ab-slot-kit"><span>Kit</span> Django &middot; unittest &middot; requests</p>
+                        </div>
+                    </article>
+                    <article class="ab-slot">
+                        <div class="ab-slot-inner">
+                            <div class="ab-slot-top"><span class="ab-slot-type">Secondary</span><span class="ab-slot-key">2</span></div>
+                            <h3 class="ab-slot-name">Java</h3>
+                            <p class="ab-slot-desc">Object-oriented programming and data structures.</p>
+                            <p class="ab-slot-kit"><span>Kit</span> OOP &middot; Collections &middot; JUnit</p>
+                        </div>
+                    </article>
+                    <article class="ab-slot">
+                        <div class="ab-slot-inner">
+                            <div class="ab-slot-top"><span class="ab-slot-type">Attachments</span><span class="ab-slot-key">3</span></div>
+                            <h3 class="ab-slot-name">Django &amp; the web</h3>
+                            <p class="ab-slot-desc">Server-rendered apps with auth, forms and JSON endpoints.</p>
+                            <p class="ab-slot-kit"><span>Kit</span> HTML &middot; CSS &middot; JavaScript &middot; AJAX</p>
+                        </div>
+                    </article>
+                    <article class="ab-slot">
+                        <div class="ab-slot-inner">
+                            <div class="ab-slot-top"><span class="ab-slot-type">Utility</span><span class="ab-slot-key">4</span></div>
+                            <h3 class="ab-slot-name">Git &amp; Linux</h3>
+                            <p class="ab-slot-desc">Version control, the terminal, and shipping to PWS.</p>
+                            <p class="ab-slot-kit"><span>Kit</span> GitHub &middot; Bash &middot; PostgreSQL</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== STACK MARQUEE (from the Projects' tech stacks) ========== -->
+        <section class="ab-marquee" aria-label="Tech stack">
+            <span class="ab-marquee-label">Stack</span>
+            <div class="ab-marquee-viewport">
+                <div class="ab-marquee-track">
+                    <ul class="ab-marquee-list">
+                        {% for item in stack_list %}
+                            <li>{{ item }}</li>
+                        {% empty %}
+                            <li>Python</li><li>Java</li><li>Django</li><li>PostgreSQL</li><li>SQLite</li>
+                            <li>HTML</li><li>CSS</li><li>JavaScript</li><li>Git</li><li>Linux</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== COMMS BANNER ========== -->
+        <section class="ab-comms" id="comms" data-ab-waypoint="Comms" aria-label="Transmission">
+            <div class="ab-wrap">
+                <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 01 <span class="ab-dim">&middot; Ch 07</span></p>
+                <div class="ab-comms-body" data-ab-type>
+                    <p>Callsign Evan. Computer Science, Universitas Indonesia.</p>
+                    <p>Building systems with security designed in from the start.</p>
+                    <p>Channel open. Contact details below. Over.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    {# ================================================================== #}
+    {#  UNCLASSIFIED — calm, printable one-page CV                         #}
+    {# ================================================================== #}
+    <article class="ab-cv" aria-label="Curriculum vitae">
+        <div class="ab-cv-wrap">
+            <header class="ab-cv-head">
+                <p class="ab-cv-status">Unclassified &middot; Service record</p>
+                <h1 class="ab-cv-name">{{ name }}</h1>
+                <p class="ab-cv-role">Computer Science student, Universitas Indonesia &middot; Depok, Indonesia</p>
+                <ul class="ab-cv-contact">
+                    <li><a href="mailto:michaelevanpn@gmail.com">michaelevanpn@gmail.com</a></li>
+                    <li><a href="https://github.com/DJITOE-IPUN" target="_blank" rel="noopener noreferrer">github.com/DJITOE-IPUN</a></li>
+                    <li><a href="https://www.linkedin.com/in/michael-evan-putra-nugroho-g624/" target="_blank" rel="noopener noreferrer">linkedin.com/in/michael-evan-putra-nugroho-g624</a></li>
+                </ul>
+                <dl class="ab-cv-facts">
+                    <div><dt>NPM</dt><dd>{{ npm }}</dd></div>
+                    <div><dt>Program</dt><dd>{{ study_program }}</dd></div>
+                    <div><dt>Last session</dt><dd>{{ last_login }}</dd></div>
+                </dl>
+                <button type="button" class="ab-cv-print" data-ab-print>Print this page</button>
+            </header>
+
+            <section class="ab-cv-section">
+                <h2>Profile</h2>
+                <p>{{ bio }}</p>
+            </section>
+
+            <section class="ab-cv-section">
+                <h2>Skills</h2>
+                <dl class="ab-cv-skills">
+                    <div><dt>Primary</dt><dd>Python</dd></div>
+                    <div><dt>Secondary</dt><dd>Java</dd></div>
+                    <div><dt>Web</dt><dd>Django, HTML, CSS, JavaScript, AJAX</dd></div>
+                    <div><dt>Tools</dt><dd>Git, GitHub, Linux, Bash, PostgreSQL</dd></div>
+                </dl>
+            </section>
+
+            <section class="ab-cv-section">
+                <div class="ab-cv-section-head">
+                    <h2>Experience</h2>
+                    <a href="{% url 'main:show_experience' %}">Experience page</a>
+                </div>
+                {% for experience in experience_list %}
+                    <div class="ab-cv-item">
+                        <div class="ab-cv-item-head">
+                            <h3>{{ experience.title }}</h3>
+                            <span class="ab-cv-date">{{ experience.date_range }}</span>
+                        </div>
+                        <p class="ab-cv-meta">{{ experience.organization }}{% if experience.location %} &middot; {{ experience.location }}{% endif %} &middot; {{ experience.get_category_display }}</p>
+                        {% if experience.description %}<p class="ab-cv-desc">{{ experience.description }}</p>{% endif %}
+                    </div>
+                {% empty %}
+                    <p class="ab-cv-empty">No experience entries yet.</p>
+                {% endfor %}
+            </section>
+
+            <section class="ab-cv-section">
+                <div class="ab-cv-section-head">
+                    <h2>Projects</h2>
+                    <a href="{% url 'main:show_projects' %}">Projects page</a>
+                </div>
+                {% for project in project_list %}
+                    <div class="ab-cv-item">
+                        <div class="ab-cv-item-head">
+                            <h3>{% if project.project_url %}<a href="{{ project.project_url }}" target="_blank" rel="noopener noreferrer">{{ project.title }}</a>{% else %}{{ project.title }}{% endif %}</h3>
+                        </div>
+                        <p class="ab-cv-meta">{{ project.tech_stack }}</p>
+                        {% if project.description %}<p class="ab-cv-desc">{{ project.description }}</p>{% endif %}
+                    </div>
+                {% empty %}
+                    <p class="ab-cv-empty">No projects yet.</p>
+                {% endfor %}
+            </section>
+
+            <section class="ab-cv-section">
+                <div class="ab-cv-section-head">
+                    <h2>Education</h2>
+                    <a href="{% url 'main:show_education' %}">Education page</a>
+                </div>
+                {% for education in education_list %}
+                    <div class="ab-cv-item">
+                        <div class="ab-cv-item-head">
+                            <h3>{{ education.institution }}</h3>
+                            <span class="ab-cv-date">{{ education.date_range }}</span>
+                        </div>
+                        <p class="ab-cv-meta">{{ education.get_degree_display }} &middot; {{ education.field_of_study }}</p>
+                        {% if education.description %}<p class="ab-cv-desc">{{ education.description }}</p>{% endif %}
+                    </div>
+                {% empty %}
+                    <p class="ab-cv-empty">No education entries yet.</p>
+                {% endfor %}
+            </section>
+
+            <section class="ab-cv-section">
+                <div class="ab-cv-section-head">
+                    <h2>Awards</h2>
+                    <a href="{% url 'main:show_awards' %}">Awards page</a>
+                </div>
+                {% for award in award_list %}
+                    <div class="ab-cv-item">
+                        <div class="ab-cv-item-head">
+                            <h3>{{ award.title }}</h3>
+                            <span class="ab-cv-date">{{ award.date_awarded }}</span>
+                        </div>
+                        <p class="ab-cv-meta">{{ award.issuer }} &middot; {{ award.get_category_display }}</p>
+                        {% if award.description %}<p class="ab-cv-desc">{{ award.description }}</p>{% endif %}
+                    </div>
+                {% empty %}
+                    <p class="ab-cv-empty">No awards yet.</p>
+                {% endfor %}
+            </section>
+        </div>
+    </article>
+</main>
 {% endblock content %}

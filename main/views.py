@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from main.models import Education, Project, Award, Experience
 from main.forms import EducationForm, ProjectForm, AwardsForm
+from main.telemetry import get_github_telemetry
 
 import datetime
 
@@ -17,8 +18,20 @@ def check_is_editor(user):
     return user.is_authenticated and (user.groups.filter(name='Editor').exists() or user.is_superuser)
 
 # --- VIEWS UTAMA ---
+def collect_stack(projects):
+    """Unique tech-stack items across all projects, in first-seen order (for the homepage marquee)."""
+    seen = {}
+    for project in projects:
+        for item in (project.tech_stack or "").split(","):
+            item = item.strip()
+            if item and item.lower() not in seen:
+                seen[item.lower()] = item
+    return list(seen.values())
+
+
 def show_main(request):
     last_login = request.COOKIES.get('last_login', 'Belum ada sesi login / Cookie tidak ditemukan')
+    project_list = Project.objects.all()
     context = {
         'name': 'Michael Evan Putra Nugroho',
         'npm': '2506616674',
@@ -27,6 +40,14 @@ def show_main(request):
             "Hi, I'm Evan. Computer Science student at Universitas Indonesia driven by a passion for defence tech & system engineering."
         ),
         "last_login": last_login,
+        # Afterburner: radar counts and the one-page CV shown in Unclassified mode
+        'experience_list': Experience.objects.all(),
+        'education_list': Education.objects.all(),
+        'award_list': Award.objects.all(),
+        'project_list': project_list,
+        'stack_list': collect_stack(project_list),
+        # Afterburner: GitHub telemetry for the display (None without GITHUB_TOKEN)
+        'telemetry': get_github_telemetry(),
     }
     return render(request, "index.html", context)
 
