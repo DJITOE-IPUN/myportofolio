@@ -15,7 +15,6 @@ from main.afterburner import (
     build_sorties, sortie_stats, flight_path, build_qualifications, build_rack, parse_period,
 )
 from main.coolwall import COOL_WALL, COOL_WALL_ZONES
-from main.telemetry import get_github_telemetry
 
 import datetime
 
@@ -38,7 +37,6 @@ def collect_stack(projects):
 
 def show_main(request):
     last_login = request.COOKIES.get('last_login', 'No sign-in yet')
-    project_list = Project.objects.all()
     project_list = Project.objects.all()
     context = {
         'name': NAME,

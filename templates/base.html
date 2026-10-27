@@ -41,32 +41,6 @@
             }, 3000);
         })();
     </script>
-    <script>
-        /* Afterburner — runs before first paint.
-           1. Picks the clearance mode: the visitor's saved choice, otherwise Unclassified
-              on touch devices or with reduced motion, Classified everywhere else.
-           2. Decides whether this is the first visit (cold start).
-           3. Arms a failsafe so the page never stays dark if afterburner.js fails to load. */
-        (function () {
-            var d = document.documentElement, mode = null, cold = false;
-            var mq = function (q) { return !!(window.matchMedia && window.matchMedia(q).matches); };
-            d.classList.add('ab-js');
-            try { mode = localStorage.getItem('ab-clearance'); } catch (e) {}
-            if (mode !== 'classified' && mode !== 'unclassified') {
-                mode = (mq('(prefers-reduced-motion: reduce)') || mq('(hover: none) and (pointer: coarse)'))
-                    ? 'unclassified' : 'classified';
-            }
-            d.setAttribute('data-clearance', mode);
-            try { cold = mode === 'classified' && !localStorage.getItem('ab-cold-start'); } catch (e) {}
-            if (cold) d.classList.add('ab-cold');
-            setTimeout(function () {
-                if (!window.__afterburner) {
-                    d.classList.remove('ab-cold');
-                    d.classList.add('ab-nojs', 'ab-powered');
-                }
-            }, 3000);
-        })();
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">

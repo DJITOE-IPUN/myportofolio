@@ -113,79 +113,15 @@ html[data-clearance="unclassified"] body { background-image: none; }
 .ab-hi  { color: var(--ab-text); }
 
 /* =====================================================================
-   Inner pages (still their old layout) inside the new chrome
+   Inner pages — their layouts live in afterburner-pages.css
    ===================================================================== */
 
-.ab-page:not(.ab-home) #ab-content > main {
-    min-height: 70vh;
-    padding-top: 5.5rem;
-}
-
 .ab-page h1, .ab-page h2, .ab-page h3 { font-family: var(--ab-head); }
-
-.ab-page:not(.ab-home) #ab-content h1 {
-    font-size: clamp(2rem, 4vw, 2.8rem);
-    font-weight: 800;
-    font-stretch: 80%;
-    line-height: 1;
-    text-transform: uppercase;
-}
-
-.section-kicker {
-    margin-bottom: .6rem;
-    font: 400 .72rem/1.4 var(--ab-mono);
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--ab-red);
-}
-
-.section-title { font-weight: 800; font-stretch: 80%; text-transform: uppercase; }
-.section-title::after { box-shadow: none; background-color: var(--ab-red); height: 1px; }
-
-.experiences { border-top: 0; }
-
-.experience-card { background-color: var(--ab-panel); border-radius: 2px; }
-.experience-card:hover { box-shadow: none; transform: none; border-color: var(--ab-border-hi); }
-
-.experience-date {
-    background: transparent;
-    border: 1px solid var(--ab-border);
-    border-radius: 2px;
-    color: var(--ab-soft);
-    font-family: var(--ab-mono);
-}
-
-.button {
-    border-radius: 2px;
-    font: 500 .74rem/1.2 var(--ab-mono);
-    letter-spacing: .1em;
-    text-transform: uppercase;
-}
-
-#ab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-#ab-content textarea,
-#ab-content select {
-    width: 100%;
-    padding: .6rem .75rem;
-    font: inherit;
-    color: var(--ab-text);
-    background: #0C0F14;
-    border: 1px solid var(--ab-border);
-    border-radius: 2px;
-}
-
-#ab-content input:focus,
-#ab-content textarea:focus,
-#ab-content select:focus {
-    outline: 2px solid var(--ab-red);
-    outline-offset: 0;
-    border-color: transparent;
-}
 
 #ab-content a:not([class]) { color: var(--ab-text); }
 
 /* =====================================================================
-   Cold start (first visit, Classified) + power-up
+   Cold start + boot sequence (every open or reload, Classified) + power-up
    ===================================================================== */
 
 .ab-coldstart {
@@ -236,21 +172,53 @@ html.ab-powering .ab-coldstart { opacity: 0; pointer-events: none; transition: o
 .ab-start:hover { box-shadow: 0 0 0 7px var(--ab-void), 0 0 0 8px rgba(252, 0, 0, .9); }
 .ab-start:focus-visible { outline: none; box-shadow: 0 0 0 7px var(--ab-void), 0 0 0 9px #fff; }
 
-.ab-coldstart-timer {
-    width: 120px;
+/* boot lines type in under the button while the bar fills; then the site powers up */
+.ab-boot {
+    width: min(340px, calc(100vw - 3rem));
+    font: 400 .7rem/1 var(--ab-mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ab-muted);
+}
+
+.ab-boot-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .3rem 0;
+    opacity: 0;
+}
+
+.ab-boot-head { color: var(--ab-red); }
+.ab-boot-ok { color: var(--ab-text); opacity: 0; }
+
+.ab-boot-bar {
+    display: block;
     height: 1px;
+    margin-top: .9rem;
     background-color: var(--ab-border);
 }
 
-.ab-coldstart-timer span {
+.ab-boot-bar span {
     display: block;
     width: 0;
     height: 100%;
-    background-color: var(--ab-dim);
+    background-color: var(--ab-red);
 }
 
-html.ab-cold .ab-coldstart-timer span { animation: ab-fill 4s linear forwards; }
+html.ab-boot-run .ab-boot-line,
+html.ab-boot-run .ab-boot-ok { animation: ab-boot-in .01s linear forwards; }
 
+html.ab-boot-run .ab-boot-line:nth-child(2) { animation-delay: .15s; }
+html.ab-boot-run .ab-boot-line:nth-child(3) { animation-delay: .45s; }
+html.ab-boot-run .ab-boot-line:nth-child(4) { animation-delay: .75s; }
+html.ab-boot-run .ab-boot-line:nth-child(2) .ab-boot-ok { animation-delay: .4s; }
+html.ab-boot-run .ab-boot-line:nth-child(3) .ab-boot-ok { animation-delay: .7s; }
+html.ab-boot-run .ab-boot-line:nth-child(4) .ab-boot-ok { animation-delay: 1.1s; }
+
+html.ab-boot-run .ab-boot-bar span { animation: ab-fill 1.4s var(--ab-ease) forwards; }
+
+@keyframes ab-boot-in { to { opacity: 1; } }
 @keyframes ab-fill { to { width: 100%; } }
 
 /* the grid "lights up" row by row as this cover is clipped away */
@@ -653,10 +621,11 @@ html.ab-reticle-on select,
 html.ab-reticle-on [contenteditable] { cursor: text !important; }
 
 /* popovers (delete modals, toasts) sit in the browser's top layer, above the reticle */
-html.ab-reticle-on:has(:popover-open),
-html.ab-reticle-on:has(:popover-open) * { cursor: auto !important; }
-html.ab-reticle-on:has(:popover-open) .ab-reticle,
-html.ab-reticle-on:has(:popover-open) .ab-lock { display: none; }
+/* (the comms toast is a popover too, but it never takes the pointer, so it's excluded) */
+html.ab-reticle-on:has(:popover-open:not(.toast-component)),
+html.ab-reticle-on:has(:popover-open:not(.toast-component)) * { cursor: auto !important; }
+html.ab-reticle-on:has(:popover-open:not(.toast-component)) .ab-reticle,
+html.ab-reticle-on:has(:popover-open:not(.toast-component)) .ab-lock { display: none; }
 
 .ab-reticle {
     width: 23px;
@@ -1831,7 +1800,6 @@ html.ab-js:not(.ab-powered) .ab-blip-label { animation-play-state: paused; }
     .ab-cv-wrap { padding-top: 5.5rem; }
     .ab-cv-skills div { grid-template-columns: 1fr; gap: 0; }
 
-    .ab-page:not(.ab-home) #ab-content > main { padding-top: 4.5rem; }
 }
 
 @media (max-width: 560px) {
@@ -1859,8 +1827,11 @@ html.ab-js:not(.ab-powered) .ab-blip-label { animation-play-state: paused; }
     .ab-radar-sweep,
     .ab-live-dot,
     .ab-link-state.is-syncing::before,
-    .ab-marquee-track.is-running,
-    .ab-coldstart-timer span { animation: none !important; }
+    .ab-marquee-track.is-running { animation: none !important; }
+
+    .ab-boot-line,
+    .ab-boot-ok { animation: none !important; opacity: 1; }
+    .ab-boot-bar span { animation: none !important; width: 100%; }
 
     .ab-blip::before { animation: none; opacity: 1; }
     .ab-blip::after { animation: none; }

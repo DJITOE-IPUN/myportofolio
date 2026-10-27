@@ -96,37 +96,62 @@
         poweredListeners = [];
     }
 
+    var BOOT_MS = 1550; // boot lines + bar (see .ab-boot in afterburner.css)
+
     function initColdStart() {
+        // base.html decides: every open or reload of the site, Classified only
         if (!doc.classList.contains('ab-cold')) { markPowered(); return; }
 
         var startBtn = document.getElementById('ab-start');
         var started = false;
-        var auto = setTimeout(start, 4000); // nobody waits behind a button
+        var auto = null;
+
+        // The boot only runs while the tab is visible, so it can't finish unseen in a background tab
+        function arm() {
+            if (!doc.classList.contains('ab-boot-run')) {
+                doc.classList.add('ab-boot-run');
+                window.__abBootAt = Date.now();
+            }
+            var elapsed = Date.now() - (window.__abBootAt || Date.now());
+            auto = setTimeout(start, Math.max(150, BOOT_MS - elapsed));
+        }
+
+        if (document.hidden) {
+            document.addEventListener('visibilitychange', function onVisible() {
+                if (document.hidden) return;
+                document.removeEventListener('visibilitychange', onVisible);
+                arm();
+            });
+        } else {
+            arm();
+        }
 
         if (startBtn) setTimeout(function () { startBtn.focus({ preventScroll: true }); }, 50);
+
+        // the key that skips the boot shouldn't also fire a shortcut (N, Ctrl+K)
+        function onKey(e) { e.stopPropagation(); start(); }
 
         function start() {
             if (started) return;
             started = true;
             clearTimeout(auto);
-            window.removeEventListener('keydown', start, true);
+            window.removeEventListener('keydown', onKey, true);
             if (startBtn) startBtn.removeEventListener('click', start);
-            store('ab-cold-start', '1');
 
             if (reduceMotion) {
-                doc.classList.remove('ab-cold');
+                doc.classList.remove('ab-cold', 'ab-boot-run');
                 markPowered();
                 return;
             }
 
             doc.classList.add('ab-powering');
             setTimeout(function () {
-                doc.classList.remove('ab-cold', 'ab-powering');
+                doc.classList.remove('ab-cold', 'ab-powering', 'ab-boot-run');
                 markPowered();
             }, 780);
         }
 
-        window.addEventListener('keydown', start, true);
+        window.addEventListener('keydown', onKey, true);
         if (startBtn) startBtn.addEventListener('click', start);
     }
 
@@ -713,9 +738,11 @@
        Comms banner: lines typed out like a radio transmission
        ---------------------------------------------------------------- */
     function initComms() {
-        var body = $('[data-ab-type]');
-        if (!body || reduceMotion || !hasIO) return;
+        if (reduceMotion || !hasIO) return;
+        $$('[data-ab-type]').forEach(initCommsBody);
+    }
 
+    function initCommsBody(body) {
         var lines = $$('p', body).map(function (p) {
             var text = p.textContent.trim();
             p.textContent = '';
@@ -775,6 +802,23 @@
             btn.addEventListener('click', function () { window.print(); });
         });
     }
+
+    /* ----------------------------------------------------------------
+       Shared API for the page modules (afterburner-pages.js, hangar.js)
+       ---------------------------------------------------------------- */
+    window.Afterburner = {
+        mode: mode,
+        classified: classified,
+        lively: lively,
+        setMode: setMode,
+        onModeChange: onModeChange,
+        onPowered: onPowered,
+        announce: announce,
+        store: store,
+        session: session,
+        reduceMotion: reduceMotion,
+        finePointer: finePointer
+    };
 
     /* ---------------------------------------------------------------- */
     ready(function () {
