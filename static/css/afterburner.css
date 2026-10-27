@@ -1274,12 +1274,11 @@ html.ab-js:not(.ab-powered) .ab-blip-label { animation-play-state: paused; }
 }
 
 .ab-trace-marker {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    margin: -3px 0 0 -3px;
-    border-radius: 50%;
-    background-color: var(--ab-red);
+    fill: none;
+    stroke: var(--ab-red);
+    stroke-width: 6;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
 }
 
 .ab-trace-offline {

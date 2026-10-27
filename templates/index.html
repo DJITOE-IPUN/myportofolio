@@ -22,7 +22,6 @@
 
                 <div class="ab-hero-copy">
                     <p class="ab-kicker ab-reveal" style="--d: 0s">Computer Science &middot; Universitas Indonesia</p>
-                    <h1 class="ab-hero-title ab-reveal" style="--d: .08s">{{ name }}</h1>
                     <div class="ab-hero-name">
                         <h1 class="ab-hero-title ab-reveal" style="--d: .08s" data-ab-somesay>{{ name }}</h1>
                         <p class="ab-somesay" aria-hidden="true"><span class="ab-somesay-tag">Some say</span> <span data-ab-somesay-line></span></p>
@@ -32,31 +31,6 @@
                         <div><dt>NPM</dt><dd>{{ npm }}</dd></div>
                         <div><dt>Program</dt><dd>{{ study_program }}</dd></div>
                         <div class="ab-hero-meta-wide"><dt>Last session</dt><dd>{{ last_login }}</dd></div>
-                    </dl>
-                    <a href="{% url 'main:show_experience' %}" class="ab-cta ab-reveal" style="--d: .32s">
-                        View experience
-                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-                    </a>
-                </div>
-                <div class="hero-photo">
-                    <div class="photo-block"></div>
-                    <img class="avatar" src="/static/img/MEPN.png" alt="Photo of {{ name }}">
-                </div>
-                <div class="hero-details">
-                    <p class="bio">{{ bio }}</p>
-                    <dl class="meta-list">
-                        <div class="meta-row">
-                            <dt>NPM</dt>
-                            <dd>{{ npm }}</dd>
-                        </div>
-                        <div class="meta-row">
-                            <dt>Program</dt>
-                            <dd>{{ study_program }}</dd>
-                        </div>
-                        <div class="meta-row">
-                            <dt>Sesi Terakhir Login</dt>
-                            <dd>{{ last_login }}</dd>
-                        </div>
                     </dl>
                     <a href="{% url 'main:show_experience' %}" class="ab-cta ab-reveal" style="--d: .32s">
                         View experience
@@ -146,11 +120,11 @@
                                     {% if telemetry %}
                                         <polyline class="ab-trace-line" pathLength="1" points="{{ telemetry.trace_points }}" />
                                         <line class="ab-trace-top" x1="{{ telemetry.top_x }}" y1="0" x2="{{ telemetry.top_x }}" y2="64" />
+                                        {# Top-speed dot: a round-capped, near-zero-length stroke stays a circle even though the plot stretches #}
+                                        <path class="ab-trace-marker" d="M{{ telemetry.top_x }} {{ telemetry.top_y }}h0.01" />
                                     {% endif %}
                                 </svg>
-                                {% if telemetry %}
-                                    <span class="ab-trace-marker" style="left: {% widthratio telemetry.top_x 600 100 %}%; top: {% widthratio telemetry.top_y 64 100 %}%;" aria-hidden="true"></span>
-                                {% else %}
+                                {% if not telemetry %}
                                     <span class="ab-trace-offline">No telemetry</span>
                                 {% endif %}
                             </div>
