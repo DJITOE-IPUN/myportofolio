@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>Target lost - Michael Evan Putra Nugroho</title>
+    <meta name="robots" content="noindex">
+{% endblock meta %}
+
+{% block body_class %}ab-page ab-inner ab-error-page{% endblock body_class %}
+
+{% block content %}
+<main class="ab-deck" id="ab-main">
+    <section class="ab-lost">
+        <div class="ab-wrap ab-lost-grid">
+            <div class="ab-lost-scope" aria-hidden="true">
+                <svg viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="96" />
+                    <circle cx="100" cy="100" r="64" />
+                    <circle cx="100" cy="100" r="32" />
+                    <line x1="100" y1="4" x2="100" y2="196" />
+                    <line x1="4" y1="100" x2="196" y2="100" />
+                </svg>
+                <span class="ab-lost-sweep"></span>
+                <span class="ab-lost-code">404</span>
+            </div>
+            <div class="ab-lost-copy">
+                <p class="ab-kicker">ERR-404 &middot; Contact lost</p>
+                <h1 class="ab-page-title">Target lost.</h1>
+                <p class="ab-page-lede">Returning to base. Nothing on the radar at <span class="ab-lost-path">{{ request.path }}</span>.</p>
+                <div class="ab-lost-actions">
+                    <a href="{% url 'main:show_main' %}" class="ab-btn ab-btn-solid">Return to base</a>
+                    <button type="button" class="ab-btn ab-btn-quiet" data-ab-cmd-open>Open command line</button>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock content %}

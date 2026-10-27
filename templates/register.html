@@ -1,33 +1,13 @@
 {% extends "base.html" %}
+
 {% block meta %}
-    <title>Register - {{ name }}</title>
+    <title>Request access - {{ name }}</title>
 {% endblock meta %}
+
+{% block body_class %}ab-page ab-inner ab-form-page{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="experience-section">
-            <div class="container">
-                <h1>Buat Akun</h1>
-                <form method="post" action="{% url 'main:register' %}" class="project-form">
-                    {% csrf_token %}
-                    {% for error in form.non_field_errors %}
-                        <p class="form-error">{{ error }}</p>
-                    {% endfor %}
-                    {% for field in form %}
-                        <div class="form-group">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-help">{{ field.help_text }}</div>
-                            {% endif %}
-                            {% for error in field.errors %}
-                                <p class="form-error">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-                    <button type="submit" class="button">Daftar</button>
-                </form>
-                <p>Sudah punya akun? <a href="{% url 'main:login' %}">Login di sini</a>.</p>
-            </div>
-        </section>
-    </main>
+    {% url 'main:register' as action %}
+    {% url 'main:login' as alt_url %}
+    {% include "components/auth_panel.html" with code="AUTH-02" title="Request access" lede="An account lets you commend sorties and airframes. That's all it does. No newsletter, promise." submit="Create account" alt_text="Already cleared?" alt_label="Sign in" %}
 {% endblock content %}

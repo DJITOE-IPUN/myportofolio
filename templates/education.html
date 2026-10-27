@@ -1,275 +1,214 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block meta %}
-    <title>Education - {{ name }}</title>
+    <title>Qualifications · Education - {{ name }}</title>
+    <meta name="description" content="Education of {{ name }}, as type ratings.">
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-inner ab-quals-page{% endblock body_class %}
+
 {% block content %}
-<main>
-    <section class="experience-section" id="education">
-        <div class="container">
-            <p class="section-kicker">Latar Belakang Akademis</p>
-            <div class="project-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h1>Education</h1>
-                {% if user.is_superuser %}
-                    <button type="button" class="button" id="btn-open-modal">
-                        <span aria-hidden="true">+</span> Tambah Pendidikan (AJAX)
-                    </button>
+<main class="ab-deck" id="ab-main">
+
+    <!-- ========== PAGE HEAD ========== -->
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route ab-reveal" style="--d: 0s"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Education</p>
+                <p class="ab-kicker ab-reveal" style="--d: .04s">SEC-03 &middot; Education</p>
+                <h1 class="ab-page-title ab-reveal" style="--d: .08s">Qualifications</h1>
+            </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede ab-reveal" style="--d: .14s">Ratings held and ratings in progress, newest first.</p>
+                <dl class="ab-pagestats ab-reveal" style="--d: .2s">
+                    <div><dt>Ratings</dt><dd>{{ qualifications|length|stringformat:"02d" }}</dd></div>
+                    <div><dt>In training</dt><dd>{{ in_training|stringformat:"02d" }}</dd></div>
+                    {% with current=qualifications.0 %}
+                        <div><dt>Current</dt><dd>{% if current.semester %}Sem {{ current.semester|stringformat:"02d" }}/{{ current.semesters|stringformat:"02d" }}{% elif current %}{{ current.rating }}{% else %}&mdash;{% endif %}</dd></div>
+                    {% endwith %}
+                </dl>
+            </div>
+        </div>
+        {% if user.is_superuser %}
+            <div class="ab-wrap">
+                <p class="ab-maint"><span class="ab-maint-label">Maintenance</span>
+                    <a href="{% url 'main:create_education' %}" class="ab-btn ab-btn-quiet">Full form</a>
+                    <button type="button" class="ab-btn ab-btn-solid" id="btn-open-modal" popovertarget="add-education-modal"><span aria-hidden="true">+</span> Add qualification</button>
+                </p>
+            </div>
+        {% endif %}
+    </header>
+
+    {# ================================================================== #}
+    {#  CLASSIFIED — type-rating cards                                     #}
+    {# ================================================================== #}
+    <div class="ab-classified">
+        <section class="ab-section ab-ratings-section" id="ratings" data-ab-waypoint="Ratings" aria-labelledby="ab-ratings-title"
+                 data-json-url="{% url 'main:show_json_education' %}"
+                 data-create-url="{% url 'main:create_education_ajax' %}"
+                 data-edit-url-template="{% url 'main:edit_education' '00000000-0000-0000-0000-000000000000' %}"
+                 data-delete-url-template="{% url 'main:delete_education' '00000000-0000-0000-0000-000000000000' %}">
+            <div class="ab-wrap">
+                <header class="ab-section-head">
+                    <span class="ab-section-index">SEC-03.1</span>
+                    <h2 class="ab-section-title" id="ab-ratings-title">Type ratings</h2>
+                    <span class="ab-section-note" id="ab-ratings-note" aria-live="polite">{{ qualifications|length|stringformat:"02d" }} on file</span>
+                </header>
+
+                <form class="ab-query ab-ratings-query" id="education-search-form" role="search" action="{% url 'main:show_education' %}" method="get">
+                    <label for="search-input" class="ab-query-prompt">Find</label>
+                    <input type="search" id="search-input" name="institution" class="ab-query-input" placeholder="Search by institution" autocomplete="off">
+                    <span class="ab-query-count" id="ab-ratings-count" aria-hidden="true"></span>
+                    <button type="submit" class="ab-btn">Search</button>
+                </form>
+
+                <div id="error-message" class="ab-empty hide" role="alert">
+                    <p class="ab-empty-code">TR-ERR &middot; No link</p>
+                    <p class="ab-empty-title">Records office isn't answering.</p>
+                    <p class="ab-empty-note">Couldn't load the qualifications. <button type="button" class="ab-link-btn" id="ab-ratings-retry">Try again</button></p>
+                </div>
+                <div id="ab-ratings-nomatch" class="ab-empty hide" role="status">
+                    <p class="ab-empty-code">TR-00 &middot; No contact</p>
+                    <p class="ab-empty-title" id="ab-ratings-nomatch-title">No institution matches that.</p>
+                    <p class="ab-empty-note">Try a shorter name.</p>
+                </div>
+
+                {% if qualifications %}
+                    <div class="ab-ratings" id="education-grid">
+                        {% for qual in qualifications %}
+                            <article class="ab-rating{% if qual.ongoing %} is-training{% endif %} ab-reveal" style="--d: {% widthratio forloop.counter0 1 6 %}0ms">
+                                <div class="ab-rating-inner">
+                                    <header class="ab-rating-top">
+                                        <span class="ab-rating-code">{{ qual.code }}</span>
+                                        <span class="ab-rating-class">{{ qual.rating }}</span>
+                                    </header>
+
+                                    <h3 class="ab-rating-inst">{{ qual.obj.institution }}</h3>
+                                    <p class="ab-rating-field">{{ qual.obj.field_of_study }}</p>
+
+                                    <div class="ab-rating-facts">
+                                        <dl>
+                                            <div><dt>Period</dt><dd>{{ qual.obj.date_range }}</dd></div>
+                                            <div><dt>Level</dt><dd>{{ qual.obj.get_degree_display }}</dd></div>
+                                        </dl>
+                                        <p class="ab-stamp{% if qual.ongoing %} is-training{% endif %}">{{ qual.status }}</p>
+                                    </div>
+
+                                    {% if qual.semesters %}
+                                        <div class="ab-rating-progress" role="img" aria-label="{% if qual.semester %}Semester {{ qual.semester }} of {{ qual.semesters }}{% elif qual.ongoing %}In training{% else %}All {{ qual.semesters }} semesters complete{% endif %}">
+                                            <p class="ab-rating-progress-label">
+                                                <span>{% if qual.semester %}Semester {{ qual.semester|stringformat:"02d" }} of {{ qual.semesters|stringformat:"02d" }}{% elif qual.ongoing %}In progress{% else %}Complete{% endif %}</span>
+                                                <span>{% if qual.progress is not None %}{{ qual.progress }}%{% else %}&mdash;{% endif %}</span>
+                                            </p>
+                                            <ol class="ab-rating-segments" style="--segments: {{ qual.semesters }}" aria-hidden="true">
+                                                {% with ''|center:qual.semesters as slots %}
+                                                    {% for _ in slots %}
+                                                        <li class="{% if not qual.ongoing %}is-done{% elif qual.semester and forloop.counter < qual.semester %}is-done{% elif qual.semester and forloop.counter == qual.semester %}is-now{% endif %}"></li>
+                                                    {% endfor %}
+                                                {% endwith %}
+                                            </ol>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if qual.obj.description %}<p class="ab-rating-notes">{{ qual.obj.description }}</p>{% endif %}
+
+
+                                    {% if is_editor or user.is_superuser %}
+                                        <footer class="ab-rating-maint">
+                                            {% if is_editor %}<a href="{% url 'main:edit_education' qual.obj.id %}" class="ab-btn ab-btn-quiet">Edit</a>{% endif %}
+                                            {% if user.is_superuser %}{% include "components/education_delete_modal.html" with edu=qual.obj %}{% endif %}
+                                        </footer>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="ab-ratings" id="education-grid"></div>
+                    <div class="ab-empty" id="ab-ratings-empty">
+                        <p class="ab-empty-code">TR-00 &middot; No ratings on file</p>
+                        <p class="ab-empty-title">No qualifications logged yet.</p>
+                        <p class="ab-empty-note">Ground school is in session.</p>
+                    </div>
                 {% endif %}
             </div>
+        </section>
+    </div>
 
-            <!-- Input Pencarian (AJAX dengan Debouncing) -->
-            <div class="project-search" style="margin-bottom: 2rem;">
-                <input type="search"
-                       id="search-input"
-                       placeholder="Cari berdasarkan nama institusi/universitas..."
-                       class="project-search__input"
-                       aria-label="Cari berdasarkan nama institusi">
+    {% if user.is_superuser %}
+        <!-- Add qualification over AJAX (create_education_ajax); the Full form link is the no-JS route -->
+        <div id="add-education-modal" class="ab-dialog" popover="auto" role="dialog" aria-modal="true" aria-labelledby="add-education-title">
+            <div class="ab-dialog-panel">
+                <header class="ab-dialog-head">
+                    <span>TR-NEW <span class="ab-dim">// New rating</span></span>
+                    <button type="button" class="ab-dialog-close" id="btn-close-modal" popovertarget="add-education-modal" popovertargetaction="hide" aria-label="Close">Esc</button>
+                </header>
+                <h2 class="ab-dialog-title" id="add-education-title">Add qualification</h2>
+                <p class="ab-dialog-note">Fields marked <span class="ab-field-req">*</span> are required. Period like &ldquo;Aug 2025 &ndash; Present&rdquo;.</p>
+                <form id="add-education-form" method="post" action="{% url 'main:create_education' %}" class="ab-form">
+                    {% csrf_token %}
+                    <div class="ab-form-fields">
+                        {% include "components/form_fields.html" with form=form %}
+                    </div>
+                    <div class="ab-form-actions">
+                        <button type="button" class="ab-btn ab-btn-quiet" id="btn-cancel-modal" popovertarget="add-education-modal" popovertargetaction="hide">Abort</button>
+                        <button type="submit" class="ab-btn ab-btn-solid" id="btn-submit-form">Log rating</button>
+                    </div>
+                </form>
             </div>
+        </div>
 
-            <!-- Loading State -->
-            <div id="loading-spinner" style="display: none; text-align: center; padding: 2rem; font-weight: 600; color: var(--text-muted, #94a3b8);">
-                Memuat data pendidikan...
+        <!-- Scrub confirmation shared by cards drawn over AJAX -->
+        <div id="ab-scrub-modal" class="ab-confirm" popover="auto" role="alertdialog" aria-modal="true" aria-labelledby="ab-scrub-title" aria-describedby="ab-scrub-desc">
+            <div class="ab-confirm-panel">
+                <p class="ab-confirm-code">TR-DEL &middot; Irreversible</p>
+                <h2 class="ab-confirm-title" id="ab-scrub-title">Scrub this rating?</h2>
+                <p class="ab-confirm-desc" id="ab-scrub-desc"><strong id="ab-scrub-name">This record</strong> will be removed from the record. This can't be undone.</p>
+                <div class="ab-confirm-actions">
+                    <button type="button" class="ab-btn ab-btn-quiet" popovertarget="ab-scrub-modal" popovertargetaction="hide">Abort</button>
+                    <form method="post" action="" id="ab-scrub-form">
+                        {% csrf_token %}
+                        <button type="submit" class="ab-btn ab-btn-alarm">Scrub rating</button>
+                    </form>
+                </div>
             </div>
+        </div>
+    {% endif %}
 
-            <!-- Error State -->
-            <div id="error-message" style="display: none; background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                Gagal mengambil data dari server. Silakan coba memuat ulang halaman.
-            </div>
-
-            <!-- Grid Kontainer Utama -->
-            <div id="education-grid" class="experience-grid">
-                <!-- Data pendidikan di-render dinamis via JavaScript -->
-            </div>
+    {# ================================================================== #}
+    {#  UNCLASSIFIED — plain list                                           #}
+    {# ================================================================== #}
+    <section class="ab-plain" aria-label="Education">
+        <div class="ab-plain-wrap">
+            {% for qual in qualifications %}
+                <div class="ab-cv-item">
+                    <div class="ab-cv-item-head">
+                        <h3>{{ qual.obj.institution }}</h3>
+                        <span class="ab-cv-date">{{ qual.obj.date_range }}</span>
+                    </div>
+                    <p class="ab-cv-meta">{{ qual.obj.get_degree_display }} &middot; {{ qual.obj.field_of_study }}{% if qual.semester %} &middot; Semester {{ qual.semester }} of {{ qual.semesters }}{% endif %}</p>
+                    {% if qual.obj.description %}<p class="ab-cv-desc">{{ qual.obj.description }}</p>{% endif %}
+                </div>
+            {% empty %}
+                <p class="ab-cv-empty">No education entries yet.</p>
+            {% endfor %}
         </div>
     </section>
 
-    <!-- Modal Form Tambah Education -->
-    {% if user.is_superuser %}
-    <div id="add-education-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
-        <div style="background: var(--bg-card, #1e293b); padding: 2rem; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; color: var(--text-main, #f8fafc);">
-            <button type="button" id="btn-close-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted, #94a3b8);">&times;</button>
-            <h2 style="margin-top: 0; margin-bottom: 1.5rem;">Tambah Riwayat Pendidikan</h2>
-            
-            <form id="add-education-form">
-                {% csrf_token %}
-                {% for field in form %}
-                    <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem;">
-                        <label for="{{ field.id_for_label }}" style="font-weight: 600; font-size: 0.875rem;">{{ field.label }}</label>
-                        {{ field }}
-                        <span class="field-error" id="error-{{ field.name }}" style="color: #ef4444; font-size: 0.8rem;"></span>
-                    </div>
-                {% endfor %}
-
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button type="button" id="btn-cancel-modal" class="button button-secondary">Batal</button>
-                    <button type="submit" id="btn-submit-form" class="button">Simpan Data</button>
-                </div>
-            </form>
+    <!-- ========== COMMS ========== -->
+    <section class="ab-comms" data-ab-waypoint="Comms" aria-label="Transmission">
+        <div class="ab-wrap">
+            <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 03 <span class="ab-dim">&middot; Ch 07</span></p>
+            <div class="ab-comms-body" data-ab-type>
+                <p>Still in training. Taking good notes.</p>
+                <p>Next rating on schedule. Over.</p>
+            </div>
         </div>
-    </div>
-    {% endif %}
+    </section>
 </main>
-
-<script>
-    // --- HELPER UTILITIES ---
-    // 1. Escaping HTML untuk proteksi XSS Client-Side
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-    // 2. Mengambil Token CSRF dari Cookie
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // --- DEBOUNCING UNTUK FITUR PENCARIAN ---
-    function debounce(func, delay) {
-        let timeoutId;
-        return function (...args) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
-
-    // --- FETCH & RENDER DATA EDUCATION VIA AJAX ---
-    async function fetchEducation(query = '') {
-        const grid = document.getElementById('education-grid');
-        const spinner = document.getElementById('loading-spinner');
-        const errorMsg = document.getElementById('error-message');
-
-        spinner.style.display = 'block';
-        errorMsg.style.display = 'none';
-
-        try {
-            const response = await fetch(`{% url 'main:show_json_education' %}?institution=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error('HTTP status ' + response.status);
-
-            const data = await response.json();
-            const educations = data.educations;
-            const perms = data.user_permissions;
-
-            spinner.style.display = 'none';
-            grid.innerHTML = '';
-
-            if (educations.length === 0) {
-                grid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem;">
-                        <p class="empty-state">
-                            ${query ? 'Tidak ada riwayat pendidikan dengan nama institusi tersebut.' : 'Belum ada data pendidikan yang ditambahkan.'}
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
-            educations.forEach(edu => {
-                const article = document.createElement('article');
-                article.className = 'experience-card';
-
-                let actionsHtml = '';
-                if (perms.is_editor) {
-                    actionsHtml += `<a href="/education/edit/${edu.id}/" class="button button-secondary">Edit</a> `;
-                }
-
-                article.innerHTML = `
-                    <div class="experience-card__header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
-                        <div>
-                            <h2>${escapeHtml(edu.institution)}</h2>
-                            <span class="experience-category">${escapeHtml(edu.degree)} &middot; ${escapeHtml(edu.field_of_study)}</span>
-                        </div>
-                        <span class="experience-date">${escapeHtml(edu.start_year)} - ${escapeHtml(edu.end_year)}</span>
-                    </div>
-
-                    <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                        <button type="button" class="btn-star" style="background: transparent; border: 1px solid var(--line, #334155); color: var(--text-main, #fff); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer;">
-                            ${edu.is_starred ? '★ Unstar' : '☆ Star'} (${edu.total_stars})
-                        </button>
-                        <div class="actions">
-                            ${actionsHtml}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(article);
-            });
-
-        } catch (err) {
-            console.error('Fetch error:', err);
-            spinner.style.display = 'none';
-            errorMsg.style.display = 'block';
-            if (typeof showToast === 'function') {
-                showToast('Gagal memuat data pendidikan', 'error');
-            }
-        }
-    }
-
-    // --- INISIALISASI DOM & EVENT LISTENERS ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Fetch data awal saat halaman dimuat
-        fetchEducation();
-
-        // Fitur Pencarian AJAX dengan Debouncing (300ms)
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', debounce((e) => {
-                fetchEducation(e.target.value);
-            }, 300));
-        }
-
-        // Modal Form Handling
-        const modal = document.getElementById('add-education-modal');
-        const btnOpen = document.getElementById('btn-open-modal');
-        const btnClose = document.getElementById('btn-close-modal');
-        const btnCancel = document.getElementById('btn-cancel-modal');
-        const form = document.getElementById('add-education-form');
-
-        const openModal = () => { if (modal) modal.style.display = 'flex'; };
-        const closeModal = () => {
-            if (modal) {
-                modal.style.display = 'none';
-                if (form) form.reset();
-                document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-            }
-        };
-
-        if (btnOpen) btnOpen.addEventListener('click', openModal);
-        if (btnClose) btnClose.addEventListener('click', closeModal);
-        if (btnCancel) btnCancel.addEventListener('click', closeModal);
-
-        // Submit Form via AJAX POST
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-
-                const formData = new FormData(form);
-                const submitBtn = document.getElementById('btn-submit-form');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Menyimpan...';
-
-                try {
-                    const response = await fetch("{% url 'main:create_education_ajax' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken'),
-                        },
-                        body: formData
-                    });
-
-                    const resData = await response.json();
-
-                    if (response.status === 201) {
-                        closeModal();
-                        if (typeof showToast === 'function') {
-                            showToast(resData.message, 'success');
-                        }
-                        // Refresh data tanpa reload halaman
-                        fetchEducation(searchInput ? searchInput.value : '');
-                    } else if (response.status === 400) {
-                        if (resData.errors) {
-                            for (let field in resData.errors) {
-                                const errSpan = document.getElementById(`error-${field}`);
-                                if (errSpan) {
-                                    errSpan.textContent = resData.errors[field].join(', ');
-                                }
-                            }
-                        }
-                        if (typeof showToast === 'function') {
-                            showToast(resData.error || 'Terjadi kesalahan validasi', 'error');
-                        }
-                    } else if (response.status === 403) {
-                        if (typeof showToast === 'function') {
-                            showToast(resData.error || 'Akses ditolak', 'error');
-                        }
-                    }
-                } catch (err) {
-                    console.error('AJAX Submit Error:', err);
-                    if (typeof showToast === 'function') {
-                        showToast('Gagal terhubung ke server', 'error');
-                    }
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Simpan Data';
-                }
-            });
-        }
-    });
-</script>
 {% endblock content %}
+
+{% block scripts %}
+    <script src="{% static 'js/qualifications.js' %}" defer></script>
+{% endblock scripts %}

@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, TextInput, Textarea, URLInput
+from django.forms import ModelForm, TextInput, Textarea, URLInput, Select
 from django.utils.html import strip_tags
 from main.models import Education, Project, Award, Experience
 
@@ -36,41 +36,36 @@ class EducationForm(ModelForm):
         ]
 
         labels = {
-            "institution": "Institusi Pendidikan",
-            "degree": "Jenjang Pendidikan",
-            "field_of_study": "Program Studi / Jurusan",
-            "date_range": "Masa Studi",
-            "description": "Deskripsi",
+            "institution": "Institution",
+            "degree": "Level",
+            "field_of_study": "Field of study",
+            "date_range": "Period",
+            "description": "Notes",
         }
 
         widgets = {
             "institution": TextInput(
                 attrs={
-                    "placeholder": "SD, SMP, SMA, PT/AK/DNS",
+                    "placeholder": "Universitas Indonesia",
                     "maxlength": 255,
                 }
             ),
-            "degree": TextInput(
-                attrs={
-                    "placeholder": "bachelor / secondary_school / diploma / master",
-                    "maxlength": 255,
-                }
-            ),
+            "degree": Select(choices=Education.DEGREE_CHOICES),
             "field_of_study": TextInput(
                 attrs={
-                    "placeholder": "Fakultas / Jurusan",
+                    "placeholder": "Computer Science",
                     "maxlength": 255,
                 }
             ),
             "date_range": TextInput(
                 attrs={
-                    "placeholder": "Tahun - Tahun",
+                    "placeholder": "Aug 2025 – Present",
                     "maxlength": 100,
                 }
             ),
             "description": Textarea(
                 attrs={
-                    "placeholder": "Ceritakan pencapaian atau aktivitas selama masa studi...",
+                    "placeholder": "Focus areas, activities, results",
                     "rows": 3,
                 }
             ),
@@ -108,11 +103,11 @@ class ProjectForm(ModelForm):
         ]
 
         labels = {
-            "title": "Nama Proyek",
-            "description": "Deskripsi Proyek",
-            "tech_stack": "Teknologi yang Digunakan",
-            "project_url": "URL Proyek",
-            "project_image_url": "URL Gambar Proyek",
+            "title": "Name",
+            "description": "Description",
+            "tech_stack": "Systems (comma-separated)",
+            "project_url": "Project URL",
+            "project_image_url": "Image URL",
         }
 
         widgets = {
@@ -124,7 +119,7 @@ class ProjectForm(ModelForm):
             ),
             "description": Textarea(
                 attrs={
-                    "placeholder": "Ceritakan Proyekmu",
+                    "placeholder": "What it does and why it exists",
                     "rows": 3,
                 }
             ),
@@ -168,44 +163,56 @@ class ProjectForm(ModelForm):
 
 
 class AwardsForm(ModelForm):
+    # The category picks the ribbon's family (where the red goes). Optional, so
+    # older forms that never sent it keep working; it falls back to "honor".
+    category = forms.ChoiceField(
+        choices=[("", "Choose a category")] + Award.AWARD_TYPE_CHOICES,
+        required=False,
+        label="Category (sets the ribbon)",
+    )
+
+    def clean_category(self):
+        return self.cleaned_data.get("category") or "honor"
+
     class Meta:
         model = Award
         fields = [
             "title",
             "issuer",
+            "category",
             "date_awarded",
             "description",
         ]
 
         labels = {
-            "title": "Nama Penghargaan",
-            "issuer": "Penyelenggara / Pemberi",
-            "date_awarded": "Tahun / Tanggal Penerimaan",
-            "description": "Deskripsi Prestasi",
+            "title": "Title",
+            "issuer": "Issued by",
+            "date_awarded": "Date awarded",
+            "description": "Citation",
         }
 
         widgets = {
             "title": TextInput(
                 attrs={
-                    "placeholder": "Kejuaran, Olimpiade",
+                    "placeholder": "1st place, national hackathon",
                     "maxlength": 255,
                 }
             ),
             "issuer": TextInput(
                 attrs={
-                    "placeholder": "Instansi penyelenggara",
+                    "placeholder": "Organiser",
                     "maxlength": 255,
                 }
             ),
             "date_awarded": TextInput(
                 attrs={
-                    "placeholder": "Tahun diterima",
+                    "placeholder": "Aug 2026",
                     "maxlength": 100,
                 }
             ),
             "description": Textarea(
                 attrs={
-                    "placeholder": "Deskripsikan detail pencapaian atau kategori lomba...",
+                    "placeholder": "What it was for, in a sentence or two",
                     "rows": 3,
                 }
             ),

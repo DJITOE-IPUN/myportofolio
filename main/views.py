@@ -11,8 +11,15 @@ from django.views.decorators.http import require_POST
 from main.models import Education, Project, Award, Experience
 from main.forms import EducationForm, ProjectForm, AwardsForm
 from main.telemetry import get_github_telemetry
+from main.afterburner import (
+    build_sorties, sortie_stats, flight_path, build_qualifications, build_rack, parse_period,
+)
+from main.coolwall import COOL_WALL, COOL_WALL_ZONES
+from main.telemetry import get_github_telemetry
 
 import datetime
+
+NAME = 'Michael Evan Putra Nugroho'
 
 def check_is_editor(user):
     return user.is_authenticated and (user.groups.filter(name='Editor').exists() or user.is_superuser)
@@ -30,10 +37,11 @@ def collect_stack(projects):
 
 
 def show_main(request):
-    last_login = request.COOKIES.get('last_login', 'Belum ada sesi login / Cookie tidak ditemukan')
+    last_login = request.COOKIES.get('last_login', 'No sign-in yet')
+    project_list = Project.objects.all()
     project_list = Project.objects.all()
     context = {
-        'name': 'Michael Evan Putra Nugroho',
+        'name': NAME,
         'npm': '2506616674',
         'study_program': 'S1 Ilmu Komputer',
         'bio': (
@@ -52,36 +60,63 @@ def show_main(request):
     return render(request, "index.html", context)
 
 def show_experience(request):
-    experience_list = Experience.objects.all()
+    # Afterburner "Sorties": experiences in flight order with derived debrief data
+    sorties = build_sorties(Experience.objects.prefetch_related('stars'), user=request.user)
     context = {
-        'name': 'Michael Evan Putra Nugroho',
-        'experience_list': experience_list,
+        'name': NAME,
+        'experience_list': [sortie['obj'] for sortie in sorties],
+        'sorties': sorties,
+        'stats': sortie_stats(sorties),
+        'path': flight_path(len(sorties)),
     }
     return render(request, "experience.html", context)
 
 def show_education(request):
+    # Afterburner "Qualifications". The cards are rendered here first (so the page
+    # works without JavaScript), then qualifications.js keeps them live over AJAX:
+    # show_json_education for the list and search, create_education_ajax for adding.
     title_query = request.GET.get('title', '')
+    qualifications = build_qualifications(Education.objects.all())
     context = {
-        'name': 'Michael Evan Putra Nugroho',
+        'name': NAME,
         'form': EducationForm(),
-        'title':title_query,
+        'title': title_query,
         'is_editor': check_is_editor(request.user),
-        
+        'education_list': [qual['obj'] for qual in qualifications],
+        'qualifications': qualifications,
+        'in_training': sum(1 for qual in qualifications if qual['ongoing']),
     }
     return render(request, "education.html", context)
 
 def show_awards(request):
-    award_list = Award.objects.all()
+    # Afterburner "Ribbon rack": one generated ribbon per award
+    citations, rack = build_rack(Award.objects.all())
     context = {
-        'name': 'Michael Evan Putra Nugroho',
-        'award_list': award_list,
+        'name': NAME,
+        'award_list': [item['obj'] for item in citations],
+        'citations': citations,
+        'rack': rack,
+        'is_editor': check_is_editor(request.user),
     }
     return render(request, "awards.html", context)
+
+def show_coolwall(request):
+    # Easter egg: the Cool Wall (verdicts live in main/coolwall.py)
+    context = {
+        'name': NAME,
+        'zones': [
+            {**zone, 'items': [item for item in COOL_WALL if item['zone'] == zone['key']]}
+            for zone in COOL_WALL_ZONES
+        ],
+        'item_count': len(COOL_WALL),
+    }
+    return render(request, "coolwall.html", context)
 
 def show_projects(request):
     title_query = request.GET.get('title', '')
     context = {
-        'name': 'Michael Evan Putra Nugroho',
+        'name': NAME,
+        'project_count': Project.objects.count(),
         'title_query': title_query,
         'is_editor': check_is_editor(request.user),
         "form": ProjectForm(),
@@ -93,12 +128,12 @@ def show_projects(request):
 @login_required(login_url='main:login')
 def create_education(request):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
+        raise PermissionDenied  # themed templates/403.html
     form = EducationForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_education')
-    return render(request, "education_form.html", {'form': form, 'title': 'Tambah Riwayat Pendidikan'})
+    return render(request, "education_form.html", {'form': form, 'title': 'Add qualification', 'code': 'TR-NEW'})
 
 @login_required(login_url='main:login')
 @require_POST
@@ -106,97 +141,97 @@ def create_education_ajax(request):
     # Otorisasi ketat di sisi server
     if not request.user.is_superuser:
         return JsonResponse({
-            'error': '403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.'
+            'error': 'Only the owner of this portfolio can add records.'
         }, status=403)
 
     form = EducationForm(request.POST)
     if form.is_valid():
         edu = form.save()
         return JsonResponse({
-            'message': f'Riwayat pendidikan di "{edu.institution}" berhasil ditambahkan!',
+            'message': f'{edu.institution} added to the record.',
             'id': str(edu.id)
         }, status=201)
     else:
         return JsonResponse({
-            'error': 'Gagal menyimpan data. Periksa kembali formulir Anda.',
+            'error': 'Some fields need another look.',
             'errors': form.errors
         }, status=400)
 
 @login_required(login_url='main:login')
 def create_project(request):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
+        raise PermissionDenied  # themed templates/403.html
     form = ProjectForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_projects')
-    return render(request, "projects_form.html", {'form': form, 'title': 'Tambah Proyek'})
+    return render(request, "projects_form.html", {'form': form, 'title': 'Commission airframe', 'code': 'AF-NEW'})
 
 @login_required(login_url='main:login')
 @require_POST
 def create_project_ajax(request):
     if not request.user.is_superuser:
         return JsonResponse({
-            'error': '403 Forbidden: Hanya Pemilik Portofolio (Superuser) yang dapat menambah data.'
+            'error': 'Only the owner of this portfolio can commission airframes.'
         }, status=403)
 
     form = ProjectForm(request.POST)
     if form.is_valid():
         project = form.save()
         return JsonResponse({
-            'message': f'Proyek "{project.title}" berhasil ditambahkan!',
+            'message': f'{project.title} commissioned. It is in the hangar.',
             'id': str(project.id)
         }, status=201)
     else:
         return JsonResponse({
-            'error': 'Gagal menyimpan data. Periksa kembali formulir Anda.',
+            'error': 'Some fields need another look.',
             'errors': form.errors
         }, status=400)
 
 @login_required(login_url='main:login')
 def create_award(request):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menambah data.")
+        raise PermissionDenied  # themed templates/403.html
     form = AwardsForm(request.POST or None)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')
-    return render(request, "awards_form.html", {'form': form, 'title': 'Tambah Penghargaan'})
+    return render(request, "awards_form.html", {'form': form, 'title': 'Add citation', 'code': 'CIT-NEW'})
 
 
 # --- EDIT / UPDATE VIEWS ---
 @login_required(login_url='main:login')
 def edit_education(request, id):
     if not check_is_editor(request.user):
-        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
+        raise PermissionDenied  # themed templates/403.html
     edu = get_object_or_404(Education, pk=id)
     form = EducationForm(request.POST or None, instance=edu)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_education')
-    return render(request, "education_form.html", {'form': form, 'title': 'Ubah Riwayat Pendidikan'})
+    return render(request, "education_form.html", {'form': form, 'title': 'Edit qualification', 'code': 'TR-EDIT', 'record': edu})
 
 @login_required(login_url='main:login')
 def edit_project(request, id):
     if not check_is_editor(request.user):
-        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
+        raise PermissionDenied  # themed templates/403.html
     project = get_object_or_404(Project, pk=id)
     form = ProjectForm(request.POST or None, instance=project)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_projects')
-    return render(request, "projects_form.html", {'form': form, 'title': 'Ubah Proyek'})
+    return render(request, "projects_form.html", {'form': form, 'title': 'Refit airframe', 'code': 'AF-EDIT', 'record': project})
 
 @login_required(login_url='main:login')
 def edit_award(request, id):
     if not check_is_editor(request.user):
-        return HttpResponseForbidden("403 Forbidden: Anda tidak memiliki hak akses Editor.")
+        raise PermissionDenied  # themed templates/403.html
     award = get_object_or_404(Award, pk=id)
     form = AwardsForm(request.POST or None, instance=award)
     if form.is_valid() and request.method == "POST":
         form.save()
         return redirect('main:show_awards')
-    return render(request, "awards_form.html", {'form': form, 'title': 'Ubah Penghargaan'})
+    return render(request, "awards_form.html", {'form': form, 'title': 'Edit citation', 'code': 'CIT-EDIT', 'record': award})
 
 
 # --- DELETE VIEWS ---
@@ -204,7 +239,7 @@ def edit_award(request, id):
 @require_POST
 def delete_education(request, id):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
+        raise PermissionDenied  # themed templates/403.html
     if request.method == "POST":
         edu = get_object_or_404(Education, pk=id)
         edu.delete()
@@ -214,7 +249,7 @@ def delete_education(request, id):
 @require_POST
 def delete_project(request, id):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
+        raise PermissionDenied  # themed templates/403.html
     if request.method == "POST":
         project = get_object_or_404(Project, pk=id)
         project.delete()
@@ -224,7 +259,7 @@ def delete_project(request, id):
 @require_POST
 def delete_award(request, id):
     if not request.user.is_superuser:
-        return HttpResponseForbidden("403 Forbidden: Hanya Pemilik Portofolio yang dapat menghapus data.")
+        raise PermissionDenied  # themed templates/403.html
     if request.method == "POST":
         award = get_object_or_404(Award, pk=id)
         award.delete()
@@ -234,27 +269,39 @@ def delete_award(request, id):
 # --- JSON DATA DELIVERY ENDPOINTS ---
 def show_json_education(request):
     query = request.GET.get('institution', '').strip()
-    
+
     if query:
         educations = Education.objects.filter(institution__icontains=query)
     else:
         educations = Education.objects.all()
 
+    # Education stores one free-text `date_range` ("2025 – Present"), so the
+    # start/end years are read from it. The qualification fields (status,
+    # semester, progress…) feed the Afterburner cards in qualifications.js.
     education_list = []
-    for edu in educations:
-        # Cek apakah user saat ini memberi star pada data education ini
-        is_starred = edu.stars.filter(id=request.user.id).exists() if request.user.is_authenticated and hasattr(edu, 'stars') else False
-        total_stars = edu.stars.count() if hasattr(edu, 'stars') else 0
-        
+    for qual in build_qualifications(educations):
+        edu = qual['obj']
+        period = parse_period(edu.date_range, start_month=8, end_month=6)
         education_list.append({
             'id': str(edu.id),
             'institution': edu.institution,
-            'degree': edu.get_degree_display() if hasattr(edu, 'get_degree_display') else edu.degree,
+            'degree': edu.get_degree_display(),
+            'degree_key': edu.degree,
             'field_of_study': edu.field_of_study,
-            'start_year': str(edu.start_year),
-            'end_year': str(edu.end_year),
-            'total_stars': total_stars,
-            'is_starred': is_starred,
+            'date_range': edu.date_range,
+            'start_year': str(period.start.year) if period.start else '',
+            'end_year': 'Present' if period.ongoing else (str(period.end.year) if period.end else ''),
+            'description': edu.description or '',
+            'code': qual['code'],
+            'rating': qual['rating'],
+            'status': qual['status'],
+            'ongoing': qual['ongoing'],
+            'semester': qual['semester'],
+            'semesters': qual['semesters'],
+            'progress': qual['progress'],
+            # Education has no stars field; kept for a consistent JSON shape
+            'total_stars': 0,
+            'is_starred': False,
         })
 
     return JsonResponse({
@@ -321,11 +368,11 @@ def register(request):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Akun berhasil dibuat. Silakan login.")
+        messages.success(request, "Account created. Sign in to continue.")
         return redirect("main:login")
 
     context = {
-        "name": "Burhan",
+        "name": NAME,
         "form": form,
     }
     return render(request, "register.html", context)
@@ -341,7 +388,7 @@ def login_user(request):
         return response
 
     context = {
-        "name": "Michael Evan",
+        "name": NAME,
         "form": form,
     }
     return render(request, "login.html", context)
@@ -354,15 +401,32 @@ def logout_user(request):
 
 
 # --- TOGGLE STAR (Logged-in User) ---
+# One view serves both star routes; the route name decides which model is starred.
+STAR_TARGETS = {
+    'toggle_experience_star': (Experience, 'main:show_experience'),
+    'toggle_project_star': (Project, 'main:show_projects'),
+}
+
+def wants_json(request):
+    return (request.headers.get('x-requested-with') == 'XMLHttpRequest'
+            or 'application/json' in request.headers.get('accept', ''))
+
 @login_required(login_url='main:login')
 @require_POST
 def toggle_star(request, id):
-    project = get_object_or_404(Project, pk=id)
-    if project.stars.filter(id=request.user.id).exists():
-        project.stars.remove(request.user)
+    model, list_view = STAR_TARGETS.get(
+        getattr(request.resolver_match, 'url_name', ''), STAR_TARGETS['toggle_project_star']
+    )
+    obj = get_object_or_404(model, pk=id)
+    starred = not obj.stars.filter(id=request.user.id).exists()
+    if starred:
+        obj.stars.add(request.user)
     else:
-        project.stars.add(request.user)
-    return redirect('main:show_projects')
+        obj.stars.remove(request.user)
+
+    if wants_json(request):
+        return JsonResponse({'starred': starred, 'count': obj.stars.count()})
+    return redirect(list_view)
 
 
 def get_projects_json(request):

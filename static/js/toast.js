@@ -31,6 +31,10 @@ function showToast(title, message, type = 'normal', duration = 3000) {
         toastComponent.showPopover();
         void toastComponent.offsetHeight; // paksa browser menghitung style agar transisi berjalan
     }
+    // Afterburner: the timer bar runs for the toast's lifetime (restarted on every call)
+    toastComponent.style.setProperty('--ab-toast-time', duration + 'ms');
+    toastComponent.classList.remove('toast-show');
+    void toastComponent.offsetWidth;
     toastComponent.classList.remove('toast-hidden');
     toastComponent.classList.add('toast-show');
 

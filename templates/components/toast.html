@@ -1,8 +1,11 @@
-  {% load static %}
-  <div id="toast-component" class="toast-component toast-hidden" popover="manual">
-      <div class="toast-content">
-          <h3 id="toast-title" class="toast-title">This is a Sample Title</h3>
-          <p id="toast-message" class="toast-message">This is a Sample Message</p>
-      </div>
-  </div>
-  <script src="{% static 'js/toast.js' %}"></script>
+{% load static %}
+{# Comms toast. toast.js drives it through showToast(title, message, type); the ids and state classes are its API. #}
+<div id="toast-component" class="toast-component ab-toast toast-hidden" popover="manual" role="status" aria-live="polite">
+    <p class="ab-toast-head"><span class="ab-toast-dot" aria-hidden="true"></span>Incoming <span class="ab-dim">&middot; Ch 07</span></p>
+    <div class="toast-content">
+        <h3 id="toast-title" class="toast-title">Standing by</h3>
+        <p id="toast-message" class="toast-message">No traffic.</p>
+    </div>
+    <span class="ab-toast-timer" aria-hidden="true"></span>
+</div>
+<script src="{% static 'js/toast.js' %}"></script>

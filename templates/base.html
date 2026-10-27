@@ -8,6 +8,43 @@
         /* Afterburner — runs before first paint.
            1. Picks the clearance mode: the visitor's saved choice, otherwise Unclassified
               on touch devices or with reduced motion, Classified everywhere else.
+           2. Decides whether to run the boot sequence: every time the site is opened or
+              reloaded (Classified only). Moving between the site's own pages skips it.
+           3. Arms a failsafe so the page never stays dark if afterburner.js fails to load. */
+        (function () {
+            var d = document.documentElement, mode = null, cold = false;
+            var mq = function (q) { return !!(window.matchMedia && window.matchMedia(q).matches); };
+            d.classList.add('ab-js');
+            try { mode = localStorage.getItem('ab-clearance'); } catch (e) {}
+            if (mode !== 'classified' && mode !== 'unclassified') {
+                mode = (mq('(prefers-reduced-motion: reduce)') || mq('(hover: none) and (pointer: coarse)'))
+                    ? 'unclassified' : 'classified';
+            }
+            d.setAttribute('data-clearance', mode);
+            try { var v = sessionStorage.getItem('ab-vision'); if (v === 'nv' || v === 'thermal') d.setAttribute('data-ab-vision', v); } catch (e) {}
+            try {
+                var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+                var type = nav ? nav.type : 'navigate';
+                var fromSite = false;
+                try { fromSite = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) {}
+                cold = mode === 'classified' && (type === 'reload' || (type === 'navigate' && !fromSite));
+            } catch (e) {}
+            if (cold) {
+                d.classList.add('ab-cold');
+                if (!document.hidden) { d.classList.add('ab-boot-run'); window.__abBootAt = Date.now(); }
+            }
+            setTimeout(function () {
+                if (!window.__afterburner) {
+                    d.classList.remove('ab-cold', 'ab-boot-run');
+                    d.classList.add('ab-nojs', 'ab-powered');
+                }
+            }, 3000);
+        })();
+    </script>
+    <script>
+        /* Afterburner — runs before first paint.
+           1. Picks the clearance mode: the visitor's saved choice, otherwise Unclassified
+              on touch devices or with reduced motion, Classified everywhere else.
            2. Decides whether this is the first visit (cold start).
            3. Arms a failsafe so the page never stays dark if afterburner.js fails to load. */
         (function () {
@@ -35,7 +72,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/afterburner.css' %}">
+    <link rel="stylesheet" href="{% static 'css/afterburner-pages.css' %}">
     <script src="{% static 'js/afterburner.js' %}" defer></script>
+    <script src="{% static 'js/afterburner-pages.js' %}" defer></script>
     {% block meta %} {% endblock meta %}
 </head>
 
@@ -43,13 +82,20 @@
     {% with here=request.resolver_match.url_name %}
     <a class="ab-skip" href="#ab-content">Skip to content</a>
 
-    <!-- Cold start: first visit only, Classified only, skippable -->
+    <!-- Cold start + boot sequence: every open or reload (Classified only).
+         Runs by itself in about 1.5 seconds; START or any key skips the wait. -->
     <div class="ab-coldstart" id="ab-coldstart">
         <div class="ab-coldstart-panel">
-            <p class="ab-coldstart-id">MFD-1 &middot; Cold</p>
+            <p class="ab-coldstart-id">MFD-1 &middot; Cold start</p>
             <button type="button" class="ab-start" id="ab-start">Start</button>
-            <p class="ab-coldstart-hint">Press any key</p>
-            <span class="ab-coldstart-timer" aria-hidden="true"><span></span></span>
+            <div class="ab-boot" aria-hidden="true">
+                <p class="ab-boot-line ab-boot-head"><span>Afterburner</span><span>v2026</span></p>
+                <p class="ab-boot-line"><span>System initializing</span><span class="ab-boot-ok">OK</span></p>
+                <p class="ab-boot-line"><span>Calibrating display</span><span class="ab-boot-ok">OK</span></p>
+                <p class="ab-boot-line"><span>Operator profile loaded</span><span class="ab-boot-ok">OK</span></p>
+                <span class="ab-boot-bar"><span></span></span>
+            </div>
+            <p class="ab-coldstart-hint">Press any key to skip</p>
         </div>
     </div>
     <div class="ab-powerup" aria-hidden="true"></div>
@@ -86,6 +132,7 @@
             <a href="{% url 'main:show_awards' %}"{% if here == 'show_awards' %} aria-current="page"{% endif %}><span class="ab-overlay-index">04</span>Awards</a>
             <a href="{% url 'main:show_projects' %}"{% if here == 'show_projects' %} aria-current="page"{% endif %}><span class="ab-overlay-index">05</span>Projects</a>
         </nav>
+        <p class="ab-overlay-hint" aria-hidden="true"><kbd>Ctrl</kbd> <kbd>K</kbd> Command line <span>&middot;</span> <kbd>N</kbd> Night vision</p>
         <div class="ab-overlay-foot">
             <span class="ab-overlay-auth">
                 {% if user.is_authenticated %}
@@ -123,6 +170,39 @@
 
     <p class="ab-sr" id="ab-announce" aria-live="polite"></p>
 
+    <!-- Night vision / thermal (press N): one filtered layer over the page, plus an indicator -->
+    <div class="ab-vision" aria-hidden="true"></div>
+    <p class="ab-vision-chip" aria-hidden="true"><span class="ab-vision-nv">NVG</span><span class="ab-vision-thermal">FLIR &middot; WHT</span> <span class="ab-dim">N to cycle</span></p>
+
+    <!-- Command line (Ctrl+K). Built by afterburner-pages.js; hidden until opened -->
+    <div class="ab-cmd" id="ab-cmd" role="dialog" aria-modal="true" aria-labelledby="ab-cmd-title" hidden>
+        <div class="ab-cmd-panel">
+            <div class="ab-cmd-head">
+                <span id="ab-cmd-title">CMD-1 <span class="ab-dim">// Command line</span></span>
+                <button type="button" class="ab-cmd-close" data-ab-cmd-close aria-label="Close command line">Esc</button>
+            </div>
+            <div class="ab-cmd-log" id="ab-cmd-log" aria-live="polite"></div>
+            <form class="ab-cmd-form" id="ab-cmd-form" autocomplete="off">
+                <label for="ab-cmd-input" class="ab-cmd-prompt">evan@deck:~$</label>
+                <input id="ab-cmd-input" name="cmd" type="text" spellcheck="false" autocapitalize="off" placeholder="type help">
+            </form>
+            <script type="application/json" id="ab-cmd-routes">{
+                "profile": "{% url 'main:show_main' %}",
+                "experience": "{% url 'main:show_experience' %}",
+                "sorties": "{% url 'main:show_experience' %}",
+                "education": "{% url 'main:show_education' %}",
+                "qualifications": "{% url 'main:show_education' %}",
+                "awards": "{% url 'main:show_awards' %}",
+                "ribbons": "{% url 'main:show_awards' %}",
+                "projects": "{% url 'main:show_projects' %}",
+                "hangar": "{% url 'main:show_projects' %}",
+                "coolwall": "{% url 'main:show_coolwall' %}",
+                "login": "{% url 'main:login' %}",
+                "register": "{% url 'main:register' %}"
+            }</script>
+        </div>
+    </div>
+
     <div id="ab-content" tabindex="-1">
         {% block content %} {% endblock content %}
     </div>
@@ -148,11 +228,21 @@
                     <a href="{% url 'main:login' %}">Login</a> &middot; <a href="{% url 'main:register' %}">Register</a>
                 {% endif %}
             </p>
+            <p class="ab-footer-extras">
+                <a href="{% url 'main:show_coolwall' %}"{% if here == 'show_coolwall' %} aria-current="page"{% endif %}>Cool Wall</a>
+                <span class="ab-footer-sep" aria-hidden="true">&middot;</span>
+                <button type="button" class="ab-footer-cmd" data-ab-cmd-open><kbd>Ctrl</kbd> <kbd>K</kbd> Command line</button>
+            </p>
             <p class="ab-footer-copy">&copy; 2026 {{ name|default:"Michael Evan Putra Nugroho" }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
         </div>
     </footer>
     {% endwith %}
 
     {% include 'components/toast.html' %}
+    {% if messages %}
+        {# Django messages arrive as comms toasts #}
+        <script type="application/json" id="ab-messages">[{% for message in messages %}{"level": "{{ message.tags|escapejs }}", "text": "{{ message|escapejs }}"}{% if not forloop.last %}, {% endif %}{% endfor %}]</script>
+    {% endif %}
+    {% block scripts %}{% endblock scripts %}
 </body>
 </html>

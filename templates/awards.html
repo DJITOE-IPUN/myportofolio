@@ -1,50 +1,151 @@
 {% extends 'base.html' %}
 
 {% block meta %}
-    <title>Honors & Awards - {{ name }}</title>
+    <title>Ribbon rack · Awards - {{ name }}</title>
+    <meta name="description" content="Honors and awards of {{ name }}.">
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-inner ab-rack-page{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="experiences" id="awards">
-            <div class="container">
-                <div class="project-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <h2 class="section-title" style="margin-bottom: 0;">Honors & Awards</h2>
-                    <a href="{% url 'main:create_award' %}" class="button project-add-button">
-                        <span aria-hidden="true">+</span>
-                        Tambah Penghargaan
-                    </a>
-                </div>
+<main class="ab-deck" id="ab-main">
 
-                <div class="experience-list">
-                    {% for award in award_list %}
-                        <article class="experience-card">
-                            <div class="experience-header">
-                                <h3 class="experience-role">{{ award.title }}</h3>
-                                <span class="experience-date">{{ award.date_awarded }}</span>
-                            </div>
-                            <p class="experience-org">
-                                {{ award.issuer }} &middot; 
-                                <span class="experience-location">{{ award.get_category_display }}</span>
-                            </p>
-                            {% if award.description %}
-                                <p class="experience-desc">{{ award.description }}</p>
-                            {% endif %}
+    <!-- ========== PAGE HEAD ========== -->
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route ab-reveal" style="--d: 0s"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Honors &amp; awards</p>
+                <p class="ab-kicker ab-reveal" style="--d: .04s">SEC-04 &middot; Honors &amp; awards</p>
+                <h1 class="ab-page-title ab-reveal" style="--d: .08s">Ribbon rack</h1>
+            </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede ab-reveal" style="--d: .14s">One ribbon per citation, newest at the top. Select a ribbon to read what it was for.</p>
+                <dl class="ab-pagestats ab-reveal" style="--d: .2s">
+                    <div><dt>Ribbons</dt><dd>{{ citations|length|stringformat:"02d" }}</dd></div>
+                    <div><dt>Latest</dt><dd>{% if citations %}{{ citations.0.obj.date_awarded }}{% else %}&mdash;{% endif %}</dd></div>
+                </dl>
+            </div>
+        </div>
+        {% if user.is_superuser %}
+            <div class="ab-wrap">
+                <p class="ab-maint"><span class="ab-maint-label">Maintenance</span>
+                    <a href="{% url 'main:create_award' %}" class="ab-btn ab-btn-solid"><span aria-hidden="true">+</span> Add citation</a>
+                </p>
+            </div>
+        {% endif %}
+    </header>
 
-                            <div class="project-card-actions" style="margin-top: 1rem;">
-                                <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                    <a href="{% url 'main:edit_award' award.id %}" class="button button-secondary">Ubah</a>
-                                    {% include "components/awards_delete_modal.html" with award=award %}
-                                </div>
+    {# ================================================================== #}
+    {#  CLASSIFIED — the rack + citation reader                            #}
+    {# ================================================================== #}
+    <div class="ab-classified">
+        <section class="ab-section ab-rack-section" id="rack" data-ab-waypoint="Rack" aria-labelledby="ab-rack-title">
+            <div class="ab-wrap">
+                <header class="ab-section-head">
+                    <span class="ab-section-index">SEC-04.1</span>
+                    <h2 class="ab-section-title" id="ab-rack-title">On the rack</h2>
+                    <span class="ab-section-note">Generated from each citation</span>
+                </header>
+
+                {% if citations %}
+                    <div class="ab-rack-layout" data-ab-rack>
+                        <div class="ab-rack-mount">
+                            <div class="ab-rack" role="tablist" aria-label="Ribbons, newest first">
+                                {% for row in rack %}
+                                    <div class="ab-rack-row">
+                                        {% for item in row %}
+                                            <button type="button" class="ab-ribbon" role="tab"
+                                                    id="ab-ribbon-{{ item.index }}"
+                                                    aria-controls="ab-citation-{{ item.index }}"
+                                                    aria-selected="{% if item.index == 1 %}true{% else %}false{% endif %}"
+                                                    {% if item.index != 1 %}tabindex="-1"{% endif %}
+                                                    aria-label="{{ item.obj.title }}"
+                                                    data-ab-ribbon="{{ item.index }}">
+                                                <svg class="ab-ribbon-svg" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+                                                    {% for stripe in item.stripes %}<rect class="{{ stripe.cls }}" x="{{ stripe.x }}" y="0" width="{{ stripe.w }}" height="30" />{% endfor %}
+                                                    <rect class="r-edge" x="0" y="0" width="100" height="30" />
+                                                </svg>
+                                            </button>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
                             </div>
-                        </article>
-                    {% empty %}
-                        <article class="experience-card">
-                            <p class="empty-state">Belum ada penghargaan yang ditambahkan.</p>
-                        </article>
-                    {% endfor %}
-                </div>
+                            <ul class="ab-rack-legend" aria-label="Ribbon families">
+                                <li><span class="ab-legend-swatch is-competition" aria-hidden="true"></span>Competition &middot; red centre</li>
+                                <li><span class="ab-legend-swatch is-academic" aria-hidden="true"></span>Academic &middot; red pinstripes</li>
+                                <li><span class="ab-legend-swatch is-leadership" aria-hidden="true"></span>Leadership &middot; red edges</li>
+                                <li><span class="ab-legend-swatch is-honor" aria-hidden="true"></span>Honor &middot; no red</li>
+                            </ul>
+                        </div>
+
+                        <div class="ab-citations">
+                            {% for item in citations %}
+                                <article class="ab-citation" role="tabpanel" id="ab-citation-{{ item.index }}" aria-labelledby="ab-ribbon-{{ item.index }}" tabindex="0" data-ab-citation="{{ item.index }}">
+                                    <header class="ab-citation-head">
+                                        <span>{{ item.code }} <span class="ab-dim">// Citation</span></span>
+                                        <span>{{ item.category }}</span>
+                                    </header>
+                                    <svg class="ab-citation-ribbon" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+                                        {% for stripe in item.stripes %}<rect class="{{ stripe.cls }}" x="{{ stripe.x }}" y="0" width="{{ stripe.w }}" height="30" />{% endfor %}
+                                        <rect class="r-edge" x="0" y="0" width="100" height="30" />
+                                    </svg>
+                                    <h3 class="ab-citation-title">{{ item.obj.title }}</h3>
+                                    <dl class="ab-citation-facts">
+                                        <div><dt>Issued by</dt><dd>{{ item.obj.issuer }}</dd></div>
+                                        <div><dt>Awarded</dt><dd>{{ item.obj.date_awarded }}</dd></div>
+                                    </dl>
+                                    <p class="ab-citation-text">{% if item.obj.description %}{{ item.obj.description }}{% else %}<span class="ab-dim">For services rendered. Details on request.</span>{% endif %}</p>
+                                    {% if is_editor or user.is_superuser %}
+                                        <footer class="ab-citation-maint">
+                                            {% if is_editor %}<a href="{% url 'main:edit_award' item.obj.id %}" class="ab-btn ab-btn-quiet">Edit</a>{% endif %}
+                                            {% if user.is_superuser %}{% include "components/awards_delete_modal.html" with award=item.obj %}{% endif %}
+                                        </footer>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="ab-empty ab-empty-rack">
+                        <span class="ab-empty-ribbon" aria-hidden="true"></span>
+                        <p class="ab-empty-code">CIT-00 &middot; Rack empty</p>
+                        <p class="ab-empty-title">No awards on the rack yet.</p>
+                        <p class="ab-empty-note">There's a space kept polished for the first one.</p>
+                    </div>
+                {% endif %}
             </div>
         </section>
-    </main>
+    </div>
+
+    {# ================================================================== #}
+    {#  UNCLASSIFIED — plain list                                           #}
+    {# ================================================================== #}
+    <section class="ab-plain" aria-label="Honors and awards">
+        <div class="ab-plain-wrap">
+            {% for item in citations %}
+                <div class="ab-cv-item">
+                    <div class="ab-cv-item-head">
+                        <h3>{{ item.obj.title }}</h3>
+                        <span class="ab-cv-date">{{ item.obj.date_awarded }}</span>
+                    </div>
+                    <p class="ab-cv-meta">{{ item.obj.issuer }} &middot; {{ item.category }}</p>
+                    {% if item.obj.description %}<p class="ab-cv-desc">{{ item.obj.description }}</p>{% endif %}
+                </div>
+            {% empty %}
+                <p class="ab-cv-empty">No awards yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ========== COMMS ========== -->
+    <section class="ab-comms" data-ab-waypoint="Comms" aria-label="Transmission">
+        <div class="ab-wrap">
+            <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 04 <span class="ab-dim">&middot; Ch 07</span></p>
+            <div class="ab-comms-body" data-ab-type>
+                <p>The rack is short. It is getting longer.</p>
+                <p>Recognition noted. Back to work. Over.</p>
+            </div>
+        </div>
+    </section>
+</main>
 {% endblock content %}

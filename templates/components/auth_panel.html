@@ -1,0 +1,32 @@
+{# Shared sign-in / sign-up layout. Expects: form, code, title, lede, action, submit, alt_text, alt_label, alt_url. #}
+<main class="ab-deck" id="ab-main">
+    <section class="ab-formdeck ab-auth">
+        <div class="ab-wrap ab-formdeck-grid">
+            <div class="ab-formdeck-side">
+                <p class="ab-route"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Clearance</p>
+                <p class="ab-kicker">{{ code }} &middot; Clearance</p>
+                <h1 class="ab-page-title">{{ title }}</h1>
+                <p class="ab-page-lede">{{ lede }}</p>
+                <dl class="ab-auth-facts">
+                    <div><dt>Grants</dt><dd>Commend sorties and airframes</dd></div>
+                    <div><dt>Session</dt><dd>Last sign-in shown on the homepage</dd></div>
+                </dl>
+            </div>
+
+            <form method="post" action="{{ action }}" class="ab-form ab-form-panel">
+                {% csrf_token %}
+                <header class="ab-form-head">
+                    <span>{{ code }} <span class="ab-dim">// Secure channel</span></span>
+                    <span class="ab-live"><span class="ab-live-dot" aria-hidden="true"></span>Open</span>
+                </header>
+                <div class="ab-form-fields">
+                    {% include "components/form_fields.html" with form=form %}
+                </div>
+                <div class="ab-form-actions">
+                    <p class="ab-form-alt">{{ alt_text }} <a href="{{ alt_url }}">{{ alt_label }}</a></p>
+                    <button type="submit" class="ab-btn ab-btn-solid">{{ submit }}</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>

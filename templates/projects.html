@@ -1,280 +1,137 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block meta %}
-    <title>Projects - {{ name }}</title>
+    <title>Hangar · Projects - {{ name }}</title>
+    <meta name="description" content="Projects built by {{ name }}.">
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-inner ab-hangar-page{% endblock body_class %}
+
 {% block content %}
-<main>
-    <section class="experience-section" id="projects">
-        <div class="container">
-            <p class="section-kicker">Karya yang saya bangun</p>
-            <div class="project-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h1>Projects</h1>
-                {% if user.is_superuser %}
-                    <button type="button" class="button project-add-button" id="btn-open-modal">
-                        <span aria-hidden="true">+</span> Tambah Proyek (AJAX)
-                    </button>
-                {% endif %}
-            </div>
+<main class="ab-deck" id="ab-main">
 
-            <!-- Input Pencarian (AJAX dengan Debouncing) -->
-            <div class="project-search" style="margin-bottom: 2rem;">
+    <!-- ========== PAGE HEAD ========== -->
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route ab-reveal" style="--d: 0s"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Projects</p>
+                <p class="ab-kicker ab-reveal" style="--d: .04s">SEC-05 &middot; Projects</p>
+                <h1 class="ab-page-title ab-reveal" style="--d: .08s">Hangar</h1>
+            </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede ab-reveal" style="--d: .14s">Things I've built, parked in their bays. Inspect any of them, or filter by the systems they run on.</p>
+                <dl class="ab-pagestats ab-reveal" style="--d: .2s">
+                    <div><dt>Airframes</dt><dd data-ab-hangar-stat="airframes">{{ project_count|stringformat:"02d" }}</dd></div>
+                    <div><dt>Systems</dt><dd data-ab-hangar-stat="systems">&mdash;</dd></div>
+                    <div><dt>Commended</dt><dd data-ab-hangar-stat="stars">&mdash;</dd></div>
+                </dl>
+            </div>
+        </div>
+        {% if user.is_superuser %}
+            <div class="ab-wrap">
+                <p class="ab-maint"><span class="ab-maint-label">Maintenance</span>
+                    <button type="button" class="ab-btn ab-btn-solid" popovertarget="add-project-modal"><span aria-hidden="true">+</span> Commission airframe</button>
+                </p>
+            </div>
+        {% endif %}
+    </header>
+
+    <!-- ========== THE HANGAR ========== -->
+    <section class="ab-section ab-hangar" id="projects" data-ab-waypoint="Bays" aria-labelledby="ab-hangar-title"
+             data-json-url="{% url 'main:show_json_projects' %}"
+             data-create-url="{% url 'main:create_project_ajax' %}"
+             data-star-url-template="{% url 'main:toggle_project_star' '00000000-0000-0000-0000-000000000000' %}"
+             data-edit-url-template="{% url 'main:edit_project' '00000000-0000-0000-0000-000000000000' %}"
+             data-delete-url-template="{% url 'main:delete_project' '00000000-0000-0000-0000-000000000000' %}"
+             data-login-url="{% url 'main:login' %}"
+             data-is-auth="{{ user.is_authenticated|yesno:'true,false' }}"
+             data-is-editor="{{ is_editor|yesno:'true,false' }}"
+             data-is-superuser="{{ user.is_superuser|yesno:'true,false' }}">
+        <div class="ab-wrap">
+            <header class="ab-section-head">
+                <span class="ab-section-index">SEC-05.1</span>
+                <h2 class="ab-section-title" id="ab-hangar-title">Bays</h2>
+                <span class="ab-section-note" id="ab-hangar-note" aria-live="polite">Live from the hangar</span>
+            </header>
+
+            <form id="project-search-form" method="get" action="{% url 'main:show_projects' %}" class="ab-query" role="search">
+                <label for="search-input" class="ab-query-prompt">Find</label>
                 <input type="search"
+                       name="title"
                        id="search-input"
-                       placeholder="Cari berdasarkan nama proyek..."
-                       class="project-search__input"
-                       aria-label="Cari berdasarkan nama proyek">
+                       value="{{ title_query }}"
+                       placeholder="Search by project name"
+                       class="ab-query-input"
+                       autocomplete="off">
+                <span class="ab-query-count" id="ab-hangar-count" aria-hidden="true"></span>
+                <button type="submit" class="ab-btn">Search</button>
+            </form>
+
+            <div class="ab-filter" id="ab-hangar-filter" hidden>
+                <span class="ab-filter-label">System</span>
+                <button type="button" class="ab-filter-chip" id="ab-hangar-filter-clear" aria-label="Clear system filter">
+                    <span id="ab-hangar-filter-name"></span>
+                    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.4"/></svg>
+                </button>
             </div>
 
-            <!-- Loading State -->
-            <div id="loading-spinner" style="display: none; text-align: center; padding: 2rem; font-weight: 600; color: var(--text-muted);">
-                ⚡ Memuat data proyek...
+            <div id="loading" class="ab-hangar-state ab-bays is-loading" role="status">
+                <span class="ab-sr">Scanning the hangar…</span>
+                <div class="ab-bay ab-bay-ghost" aria-hidden="true"></div>
+                <div class="ab-bay ab-bay-ghost" aria-hidden="true"></div>
+                <div class="ab-bay ab-bay-ghost" aria-hidden="true"></div>
             </div>
-
-            <!-- Error State -->
-            <div id="error-message" style="display: none; background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                ⚠️ Gagal mengambil data proyek dari server. Silakan coba lagi.
+            <div id="error" class="ab-empty hide" role="alert">
+                <p class="ab-empty-code">AF-ERR &middot; No link</p>
+                <p class="ab-empty-title">The hangar doors are stuck.</p>
+                <p class="ab-empty-note">Couldn't load the projects. <button type="button" class="ab-link-btn" id="ab-hangar-retry">Try again</button></p>
             </div>
-
-            <!-- Grid Kontainer Utama Proyek -->
-            <div id="project-grid" class="experience-grid project-grid">
-                <!-- Data proyek akan di-render secara dinamis via JavaScript -->
+            <div id="empty" class="ab-empty hide" role="status">
+                <p class="ab-empty-code">AF-00 &middot; <span id="ab-hangar-empty-code">Hangar empty</span></p>
+                <p class="ab-empty-title" id="ab-hangar-empty-title">No projects in the hangar yet.</p>
+                <p class="ab-empty-note" id="ab-hangar-empty-note">Suspiciously tidy in here.</p>
             </div>
+            <div id="grid" class="ab-bays hide" aria-live="polite"></div>
+            <form id="csrf-token-form" hidden>{% csrf_token %}</form>
         </div>
     </section>
 
-    <!-- Modal Form Tambah Proyek -->
-    {% if user.is_superuser %}
-    <div id="add-project-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
-        <div style="background: var(--bg-card, #1e293b); padding: 2rem; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; color: var(--text-main, #f8fafc);">
-            <button type="button" id="btn-close-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted, #94a3b8);">&times;</button>
-            <h2 style="margin-top: 0; margin-bottom: 1.5rem;">Tambah Proyek Baru</h2>
-            
-            <form id="add-project-form">
-                {% csrf_token %}
-                {% for field in form %}
-                    <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem;">
-                        <label for="{{ field.id_for_label }}" style="font-weight: 600; font-size: 0.875rem;">{{ field.label }}</label>
-                        {{ field }}
-                        <span class="field-error" id="error-{{ field.name }}" style="color: #ef4444; font-size: 0.8rem;"></span>
-                    </div>
-                {% endfor %}
-
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button type="button" id="btn-cancel-modal" class="button button-secondary">Batal</button>
-                    <button type="submit" id="btn-submit-form" class="button">Simpan Proyek</button>
-                </div>
-            </form>
+    <!-- ========== COMMS ========== -->
+    <section class="ab-comms" data-ab-waypoint="Comms" aria-label="Transmission">
+        <div class="ab-wrap">
+            <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 05 <span class="ab-dim">&middot; Ch 07</span></p>
+            <div class="ab-comms-body" data-ab-type>
+                <p>Built, flown, rebuilt when it mattered.</p>
+                <p>The next one is already on the drawing board. Over.</p>
+            </div>
         </div>
-    </div>
-    {% endif %}
+    </section>
 </main>
 
-<script>
-    // --- UTILITY HELPERS ---
-    // 1. Escaping HTML untuk mencegah XSS Client-Side
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
+{% if user.is_superuser %}
+    {% include "components/projects_form_modal.html" %}
+{% endif %}
 
-    // 2. Mengambil Token CSRF dari Cookie
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // --- DEBOUNCING FOR SEARCH ---
-    function debounce(func, delay) {
-        let timeoutId;
-        return function (...args) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
-
-    // --- FETCH & RENDER PROJECTS ---
-    async function fetchProjects(query = '') {
-        const grid = document.getElementById('project-grid');
-        const spinner = document.getElementById('loading-spinner');
-        const errorMsg = document.getElementById('error-message');
-
-        spinner.style.display = 'block';
-        errorMsg.style.display = 'none';
-
-        try {
-            const response = await fetch(`{% url 'main:show_json_projects' %}?title=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error('HTTP status ' + response.status);
-
-            const data = await response.json();
-            const projects = data.projects;
-            const perms = data.user_permissions;
-
-            spinner.style.display = 'none';
-            grid.innerHTML = '';
-
-            if (projects.length === 0) {
-                grid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem;">
-                        <p class="empty-state">
-                            ${query ? 'Tidak ada proyek dengan nama tersebut.' : 'Belum ada proyek yang ditambahkan.'}
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
-            projects.forEach(project => {
-                const article = document.createElement('article');
-                article.className = 'experience-card';
-
-                let imgHtml = '';
-                if (project.project_image_url) {
-                    imgHtml = `<img src="${escapeHtml(project.project_image_url)}" alt="Gambar ${escapeHtml(project.title)}" class="project-image">`;
-                }
-
-                let actionsHtml = '';
-                if (project.project_url) {
-                    actionsHtml += `<a href="${escapeHtml(project.project_url)}" class="button" target="_blank" rel="noopener">Lihat Project</a> `;
-                }
-                if (perms.is_editor) {
-                    actionsHtml += `<a href="/projects/edit/${project.id}/" class="button button-secondary">Edit</a> `;
-                }
-
-                article.innerHTML = `
-                    ${imgHtml}
-                    <h2>${escapeHtml(project.title)}</h2>
-                    <span class="experience-category">${escapeHtml(project.tech_stack)}</span>
-                    <p class="experience-description">${escapeHtml(project.description)}</p>
-                    
-                    <div class="project-card-actions" style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="btn-star" style="background: transparent; border: 1px solid var(--line, #334155); color: var(--text-main, #fff); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer;">
-                            ${project.is_starred ? '★ Unstar' : '☆ Star'} (${project.total_stars})
-                        </button>
-                        <div class="project-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            ${actionsHtml}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(article);
-            });
-
-        } catch (err) {
-            console.error('Fetch error:', err);
-            spinner.style.display = 'none';
-            errorMsg.style.display = 'block';
-            if (typeof showToast === 'function') {
-                showToast('Gagal memuat data proyek', 'error');
-            }
-        }
-    }
-
-    // --- EVENT LISTENERS & DOM INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initial Fetch
-        fetchProjects();
-
-        // Search with Debouncing (300ms delay)
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', debounce((e) => {
-                fetchProjects(e.target.value);
-            }, 300));
-        }
-
-        // --- MODAL & FORM HANDLING ---
-        const modal = document.getElementById('add-project-modal');
-        const btnOpen = document.getElementById('btn-open-modal');
-        const btnClose = document.getElementById('btn-close-modal');
-        const btnCancel = document.getElementById('btn-cancel-modal');
-        const form = document.getElementById('add-project-form');
-
-        const openModal = () => { if (modal) modal.style.display = 'flex'; };
-        const closeModal = () => {
-            if (modal) {
-                modal.style.display = 'none';
-                if (form) form.reset();
-                document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-            }
-        };
-
-        if (btnOpen) btnOpen.addEventListener('click', openModal);
-        if (btnClose) btnClose.addEventListener('click', closeModal);
-        if (btnCancel) btnCancel.addEventListener('click', closeModal);
-
-        // Submit Form via AJAX POST
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-
-                const formData = new FormData(form);
-                const submitBtn = document.getElementById('btn-submit-form');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Menyimpan...';
-
-                try {
-                    const response = await fetch("{% url 'main:create_project_ajax' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken'),
-                        },
-                        body: formData
-                    });
-
-                    const resData = await response.json();
-
-                    if (response.status === 201) {
-                        closeModal();
-                        if (typeof showToast === 'function') {
-                            showToast(resData.message, 'success');
-                        }
-                        // Refresh data list tanpa reload halaman
-                        fetchProjects(searchInput ? searchInput.value : '');
-                    } else if (response.status === 400) {
-                        if (resData.errors) {
-                            for (let field in resData.errors) {
-                                const errSpan = document.getElementById(`error-${field}`);
-                                if (errSpan) {
-                                    errSpan.textContent = resData.errors[field].join(', ');
-                                }
-                            }
-                        }
-                        if (typeof showToast === 'function') {
-                            showToast(resData.error || 'Terjadi kesalahan validasi', 'error');
-                        }
-                    } else if (response.status === 403) {
-                        if (typeof showToast === 'function') {
-                            showToast(resData.error || 'Akses ditolak', 'error');
-                        }
-                    }
-                } catch (err) {
-                    console.error('AJAX Submit Error:', err);
-                    if (typeof showToast === 'function') {
-                        showToast('Gagal terhubung ke server', 'error');
-                    }
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Simpan Proyek';
-                }
-            });
-        }
-    });
-</script>
+<!-- Scrap confirmation shared by every bay; hangar.js points the form at the right airframe -->
+{% if user.is_superuser %}
+    <div id="ab-scrap-modal" class="ab-confirm" popover="auto" role="alertdialog" aria-modal="true" aria-labelledby="ab-scrap-title" aria-describedby="ab-scrap-desc">
+        <div class="ab-confirm-panel">
+            <p class="ab-confirm-code">AF-DEL &middot; Irreversible</p>
+            <h2 class="ab-confirm-title" id="ab-scrap-title">Scrap this airframe?</h2>
+            <p class="ab-confirm-desc" id="ab-scrap-desc"><strong id="ab-scrap-name">This project</strong> will be removed from the hangar. This can't be undone.</p>
+            <div class="ab-confirm-actions">
+                <button type="button" class="ab-btn ab-btn-quiet" popovertarget="ab-scrap-modal" popovertargetaction="hide">Abort</button>
+                <form method="post" action="" id="ab-scrap-form">
+                    {% csrf_token %}
+                    <button type="submit" class="ab-btn ab-btn-alarm">Scrap airframe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
 {% endblock content %}
+
+{% block scripts %}
+    <script src="{% static 'js/hangar.js' %}" defer></script>
+{% endblock scripts %}

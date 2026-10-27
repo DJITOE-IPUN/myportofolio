@@ -20,6 +20,8 @@ class Experience(models.Model):
     category = models.CharField(max_length=50, choices=EXPERIENCE_CHOICES)
     description = models.TextField(blank=True, null=True)
     is_ongoing = models.BooleanField()
+    # Afterburner: tools and skills used on this sortie, comma-separated ("Django, Figma, Git")
+    kit = models.CharField(max_length=255, blank=True, default="")
 
     stars = models.ManyToManyField(User, related_name='starred_experiences', blank=True)
 

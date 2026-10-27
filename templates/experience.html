@@ -1,39 +1,209 @@
 {% extends 'base.html' %}
 
 {% block meta %}
-    <title>Experience - {{ name }}</title>
+    <title>Sorties · Experience - {{ name }}</title>
+    <meta name="description" content="Experience of {{ name }}, logged as sorties.">
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-inner ab-sorties-page{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="experiences" id="experience">
-            <div class="container">
-                <h2 class="section-title">Experience</h2>
+<main class="ab-deck" id="ab-main">
 
-                <div class="experience-list">
-                    {% for experience in experience_list %}
-                        <article class="experience-card">
-                            <div class="experience-header">
-                                <h3 class="experience-role">{{ experience.title }}</h3>
-                                <span class="experience-date">{{ experience.date_range }}</span>
-                            </div>
-                            <p class="experience-org">
-                                {{ experience.organization }} &middot; 
-                                <span class="experience-location">{{ experience.location }}</span> &middot; 
-                                <span class="experience-location">{{ experience.get_category_display }}</span>
-                            </p>
-
-                            {% if experience.description %}
-                                <p class="experience-desc">{{ experience.description }}</p>
-                            {% endif %}
-                        </article>
-                    {% empty %}
-                        <article class="experience-card">
-                            <p class="empty-state">Belum ada pengalaman yang ditambahkan.</p>
-                        </article>
-                    {% endfor %}
-                </div>
+    <!-- ========== PAGE HEAD ========== -->
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route ab-reveal" style="--d: 0s"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Experience</p>
+                <p class="ab-kicker ab-reveal" style="--d: .04s">SEC-02 &middot; Experience log</p>
+                <h1 class="ab-page-title ab-reveal" style="--d: .08s">Sorties</h1>
             </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede ab-reveal" style="--d: .14s">Every role I've taken on, logged as a sortie: what it was for, what I flew with, and how it came back.</p>
+                <dl class="ab-pagestats ab-reveal" style="--d: .2s">
+                    <div><dt>Sorties</dt><dd>{{ stats.count|stringformat:"02d" }}</dd></div>
+                    <div><dt>In flight</dt><dd>{{ stats.in_flight|stringformat:"02d" }}</dd></div>
+                    <div><dt>Flight time</dt><dd>{{ stats.flight_time }}</dd></div>
+                </dl>
+            </div>
+        </div>
+    </header>
+
+    {# ================================================================== #}
+    {#  CLASSIFIED — flight path + debriefs                                #}
+    {# ================================================================== #}
+    <div class="ab-classified">
+        <section class="ab-section ab-flight" id="flight" data-ab-waypoint="Flight path" aria-labelledby="ab-flight-title">
+            <div class="ab-wrap">
+                <header class="ab-section-head">
+                    <span class="ab-section-index">SEC-02.1</span>
+                    <h2 class="ab-section-title" id="ab-flight-title">Flight path</h2>
+                    <span class="ab-section-note">Oldest first &middot; drag or use &larr; &rarr;</span>
+                </header>
+            </div>
+
+            {% if sorties %}
+                <div class="ab-flight-deck" data-ab-flight>
+                    <div class="ab-wrap ab-flight-bar">
+                        <button type="button" class="ab-flight-step" data-ab-flight-step="-1" aria-label="Previous sortie">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+                        </button>
+                        <p class="ab-flight-readout" aria-hidden="true">WP <span data-ab-flight-pos>01</span> / {{ sorties|length|stringformat:"02d" }}</p>
+                        <button type="button" class="ab-flight-step" data-ab-flight-step="1" aria-label="Next sortie">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+                        </button>
+                        <span class="ab-flight-gauge" aria-hidden="true"><span></span></span>
+                    </div>
+
+                    <div class="ab-flight-viewport" data-ab-flight-viewport>
+                        <div class="ab-flight-track" style="--n: {{ sorties|length }}">
+                            <svg class="ab-flight-svg" viewBox="0 0 {{ path.width }} 100" preserveAspectRatio="none" aria-hidden="true">
+                                <line class="ab-flight-horizon" x1="0" y1="50" x2="{{ path.width }}" y2="50" />
+                                <path class="ab-flight-route" d="{{ path.d }}" />
+                            </svg>
+                            {# the flown stretch: the same route, solid, revealed up to what you've scrolled past #}
+                            <svg class="ab-flight-svg ab-flight-svg--flown" viewBox="0 0 {{ path.width }} 100" preserveAspectRatio="none" aria-hidden="true">
+                                <path class="ab-flight-flown" d="{{ path.d }}" />
+                            </svg>
+                            <span class="ab-flight-origin" aria-hidden="true">Takeoff &middot; Depok</span>
+                            <span class="ab-flight-now" aria-hidden="true">Now</span>
+
+                            <div class="ab-waypoints" role="tablist" aria-label="Sorties, oldest first">
+                                {% for sortie in sorties %}
+                                    <div class="ab-wp {% cycle 'is-high' 'is-low' %}{% if sortie.ongoing %} is-live{% endif %}" style="--i: {{ forloop.counter0 }}">
+                                        <span class="ab-wp-marker" aria-hidden="true"></span>
+                                        <button type="button" class="ab-wp-btn" role="tab"
+                                                id="ab-wp-{{ sortie.index }}"
+                                                aria-controls="ab-debrief-{{ sortie.index }}"
+                                                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                                                {% if not forloop.first %}tabindex="-1"{% endif %}
+                                                data-ab-wp="{{ forloop.counter0 }}">
+                                            <span class="ab-wp-top">
+                                                <span class="ab-wp-code">{{ sortie.code }}</span>
+                                                <span class="ab-wp-date">{{ sortie.obj.date_range }}</span>
+                                            </span>
+                                            <span class="ab-wp-title">{{ sortie.obj.title }}</span>
+                                            <span class="ab-wp-org">{{ sortie.obj.organization }}</span>
+                                            {% if sortie.ongoing %}<span class="ab-wp-live"><span class="ab-live-dot" aria-hidden="true"></span>In flight</span>{% endif %}
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ab-wrap">
+                    <div class="ab-debriefs">
+                        {% for sortie in sorties %}
+                            <article class="ab-debrief" role="tabpanel" id="ab-debrief-{{ sortie.index }}" aria-labelledby="ab-wp-{{ sortie.index }}" tabindex="0" data-ab-debrief="{{ forloop.counter0 }}">
+                                <header class="ab-debrief-head">
+                                    <span>{{ sortie.code }} <span class="ab-dim">// Debrief</span></span>
+                                    <span class="ab-debrief-status{% if sortie.ongoing %} is-live{% endif %}">{% if sortie.ongoing %}<span class="ab-live-dot" aria-hidden="true"></span>{% endif %}{{ sortie.outcome }}</span>
+                                </header>
+
+                                <div class="ab-debrief-main">
+                                    <div class="ab-debrief-intro">
+                                        <h3 class="ab-debrief-title">{{ sortie.obj.title }}</h3>
+                                        <p class="ab-debrief-org">{{ sortie.obj.organization }}{% if sortie.obj.location %} &middot; {{ sortie.obj.location }}{% endif %}</p>
+                                    </div>
+
+                                    <dl class="ab-debrief-grid">
+                                        <div class="ab-debrief-cell ab-debrief-objective">
+                                            <dt>Objective</dt>
+                                            <dd>{% if sortie.obj.description %}{{ sortie.obj.description }}{% else %}<span class="ab-dim">Classified. Or not written yet.</span>{% endif %}</dd>
+                                        </div>
+                                        <div class="ab-debrief-cell">
+                                            <dt>Role</dt>
+                                            <dd>{{ sortie.obj.title }} <span class="ab-dim">&middot; {{ sortie.obj.get_category_display }}</span></dd>
+                                        </div>
+                                        <div class="ab-debrief-cell">
+                                            <dt>Outcome</dt>
+                                            <dd>{{ sortie.outcome }}</dd>
+                                        </div>
+                                        <div class="ab-debrief-cell">
+                                            <dt>Flight time</dt>
+                                            <dd>{{ sortie.flight_time }} <span class="ab-dim">&middot; {{ sortie.obj.date_range }}</span></dd>
+                                        </div>
+                                        <div class="ab-debrief-cell ab-debrief-kit">
+                                            <dt>Kit used</dt>
+                                            <dd>
+                                                {% if sortie.kit %}
+                                                    <ul class="ab-chips">{% for item in sortie.kit %}<li>{{ item }}</li>{% endfor %}</ul>
+                                                {% else %}
+                                                    <span class="ab-dim">Not logged</span>
+                                                {% endif %}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+
+                                <footer class="ab-debrief-foot">
+                                    {% if user.is_authenticated %}
+                                        <form method="post" action="{% url 'main:toggle_experience_star' sortie.obj.id %}" class="ab-commend-form" data-ab-commend>
+                                            {% csrf_token %}
+                                            <button type="submit" class="ab-commend{% if sortie.starred %} is-on{% endif %}" aria-pressed="{{ sortie.starred|yesno:'true,false' }}">
+                                                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6 4.1 13.8 5 9.4 1.7 6.4l4.4-.5Z"/></svg>
+                                                <span data-ab-commend-label>{% if sortie.starred %}Commended{% else %}Commend{% endif %}</span>
+                                                <span class="ab-commend-count" data-ab-commend-count>{{ sortie.star_count|stringformat:"02d" }}</span>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a class="ab-commend" href="{% url 'main:login' %}">
+                                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6 4.1 13.8 5 9.4 1.7 6.4l4.4-.5Z"/></svg>
+                                            Sign in to commend
+                                            <span class="ab-commend-count">{{ sortie.star_count|stringformat:"02d" }}</span>
+                                        </a>
+                                    {% endif %}
+                                    <span class="ab-debrief-foot-note">{{ sortie.obj.get_category_display }} &middot; WP {{ forloop.counter|stringformat:"02d" }} of {{ sorties|length|stringformat:"02d" }}</span>
+                                </footer>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="ab-wrap">
+                    <div class="ab-empty">
+                        <p class="ab-empty-code">SRT-00 &middot; Log empty</p>
+                        <p class="ab-empty-title">No sorties logged yet.</p>
+                        <p class="ab-empty-note">The aircraft is fuelled, though. Check back soon.</p>
+                    </div>
+                </div>
+            {% endif %}
         </section>
-    </main>
+    </div>
+
+    {# ================================================================== #}
+    {#  UNCLASSIFIED — plain list                                           #}
+    {# ================================================================== #}
+    <section class="ab-plain" aria-label="Experience">
+        <div class="ab-plain-wrap">
+            {# plain CV order: newest first #}
+            {% for sortie in sorties reversed %}
+                <div class="ab-cv-item">
+                    <div class="ab-cv-item-head">
+                        <h3>{{ sortie.obj.title }}</h3>
+                        <span class="ab-cv-date">{{ sortie.obj.date_range }}</span>
+                    </div>
+                    <p class="ab-cv-meta">{{ sortie.obj.organization }}{% if sortie.obj.location %} &middot; {{ sortie.obj.location }}{% endif %} &middot; {{ sortie.obj.get_category_display }}</p>
+                    {% if sortie.obj.description %}<p class="ab-cv-desc">{{ sortie.obj.description }}</p>{% endif %}
+                    {% if sortie.kit %}<p class="ab-cv-meta">Tools: {{ sortie.kit|join:", " }}</p>{% endif %}
+                </div>
+            {% empty %}
+                <p class="ab-cv-empty">No experience entries yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ========== COMMS ========== -->
+    <section class="ab-comms" data-ab-waypoint="Comms" aria-label="Transmission">
+        <div class="ab-wrap">
+            <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 02 <span class="ab-dim">&middot; Ch 07</span></p>
+            <div class="ab-comms-body" data-ab-type>
+                <p>Every sortie logged. Every one debriefed.</p>
+                <p>Open to the next one. Channel below. Over.</p>
+            </div>
+        </div>
+    </section>
+</main>
 {% endblock content %}

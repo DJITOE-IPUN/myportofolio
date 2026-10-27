@@ -1,0 +1,33 @@
+{# Shared maintenance form page. Expects: form, title, code, section, section_url, and optionally record. #}
+<main class="ab-deck" id="ab-main">
+    <section class="ab-formdeck">
+        <div class="ab-wrap ab-formdeck-grid">
+            <div class="ab-formdeck-side">
+                <p class="ab-route"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span><a href="{{ section_url }}">{{ section }}</a><span aria-hidden="true">/</span>{% if record %}Edit{% else %}New{% endif %}</p>
+                <p class="ab-kicker">{{ code|default:"REC" }} &middot; Maintenance</p>
+                <h1 class="ab-page-title">{{ title }}</h1>
+                <p class="ab-page-lede">{% if record %}Editing <span class="ab-hi">{{ record }}</span>.{% else %}A new entry for {{ section|lower }}.{% endif %}</p>
+                <ul class="ab-checklist" aria-label="Before you save">
+                    <li>Fields marked <span class="ab-field-req">*</span> are required</li>
+                    <li>Saved changes go live straight away</li>
+                    <li>Abort returns without saving</li>
+                </ul>
+            </div>
+
+            <form method="post" class="ab-form ab-form-panel">
+                {% csrf_token %}
+                <header class="ab-form-head">
+                    <span>{{ code|default:"REC" }} <span class="ab-dim">// Form</span></span>
+                    <span>{{ form.visible_fields|length|stringformat:"02d" }} fields</span>
+                </header>
+                <div class="ab-form-fields">
+                    {% include "components/form_fields.html" with form=form %}
+                </div>
+                <div class="ab-form-actions">
+                    <a href="{{ section_url }}" class="ab-btn ab-btn-quiet">Abort</a>
+                    <button type="submit" class="ab-btn ab-btn-solid">Save record</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>

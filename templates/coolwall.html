@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block meta %}
+    <title>Cool Wall - {{ name }}</title>
+    <meta name="description" content="Languages, tools and habits, rated from seriously uncool to sub-zero.">
+{% endblock meta %}
+
+{% block body_class %}ab-page ab-inner ab-coolwall-page{% endblock body_class %}
+
+{% block content %}
+<main class="ab-deck" id="ab-main">
+
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route ab-reveal" style="--d: 0s"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Off the record</p>
+                <p class="ab-kicker ab-reveal" style="--d: .04s">EXT-01 &middot; Off the record</p>
+                <h1 class="ab-page-title ab-reveal" style="--d: .08s">Cool Wall</h1>
+            </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede ab-reveal" style="--d: .14s">Languages, tools and habits, rated on the only scale that matters. The verdicts are final. Mostly.</p>
+                <dl class="ab-pagestats ab-reveal" style="--d: .2s">
+                    <div><dt>On the wall</dt><dd>{{ item_count|stringformat:"02d" }}</dd></div>
+                    <div><dt>Coldest</dt><dd>{% for zone in zones %}{% if forloop.last %}{{ zone.temp }}{% endif %}{% endfor %}</dd></div>
+                </dl>
+            </div>
+        </div>
+    </header>
+
+    <div class="ab-classified">
+        <section class="ab-section ab-wall-section" data-ab-waypoint="The wall" aria-labelledby="ab-wall-title">
+            <div class="ab-wrap">
+                <header class="ab-section-head">
+                    <span class="ab-section-index">EXT-01.1</span>
+                    <h2 class="ab-section-title" id="ab-wall-title">The wall</h2>
+                    <span class="ab-section-note">Warm left &middot; cold right</span>
+                </header>
+
+                <div class="ab-wall">
+                    <span class="ab-wall-thermo" aria-hidden="true"></span>
+                    {% for zone in zones %}
+                        <section class="ab-wall-zone is-{{ zone.key }}" aria-labelledby="ab-zone-{{ zone.key }}">
+                            <header class="ab-wall-head">
+                                <h3 id="ab-zone-{{ zone.key }}">{{ zone.label }}</h3>
+                                <span class="ab-wall-temp">{{ zone.temp }}</span>
+                            </header>
+                            <ul class="ab-wall-items">
+                                {% for item in zone.items %}
+                                    <li class="ab-wall-card" style="--tilt: {% cycle '-2.2deg' '1.6deg' '-0.8deg' '2.4deg' '-1.4deg' %}">
+                                        <span class="ab-wall-kind">{{ item.kind }}</span>
+                                        <span class="ab-wall-name">{{ item.name }}</span>
+                                        <span class="ab-wall-verdict">{{ item.verdict }}</span>
+                                    </li>
+                                {% empty %}
+                                    <li class="ab-wall-vacant">Vacant. For now.</li>
+                                {% endfor %}
+                            </ul>
+                        </section>
+                    {% endfor %}
+                </div>
+                <p class="ab-wall-note">Format borrowed with respect from a certain motoring programme. No affiliation, no logos, no hard feelings.</p>
+            </div>
+        </section>
+    </div>
+
+    <section class="ab-plain" aria-label="Cool Wall">
+        <div class="ab-plain-wrap">
+            {% for zone in zones %}
+                <div class="ab-cv-section">
+                    <h2>{{ zone.label }}</h2>
+                    {% for item in zone.items %}
+                        <div class="ab-cv-item">
+                            <div class="ab-cv-item-head"><h3>{{ item.name }}</h3><span class="ab-cv-date">{{ item.kind }}</span></div>
+                            <p class="ab-cv-desc">{{ item.verdict }}</p>
+                        </div>
+                    {% empty %}
+                        <p class="ab-cv-empty">Vacant.</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="ab-comms" data-ab-waypoint="Comms" aria-label="Transmission">
+        <div class="ab-wrap">
+            <p class="ab-comms-head"><span class="ab-live-dot"></span> Transmission 06 <span class="ab-dim">&middot; Ch 07</span></p>
+            <div class="ab-comms-body" data-ab-type>
+                <p>Disagree with a verdict? Good.</p>
+                <p>Channel below. Bring evidence. Over.</p>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock content %}

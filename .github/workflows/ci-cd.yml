@@ -1,0 +1,73 @@
+name: CI/CD
+
+# CI: every push and pull request installs the project, checks it, and runs the tests.
+# CD: a push to main is pushed on to PWS, but only after the tests pass.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check the project
+        run: python manage.py check
+
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        run: python manage.py test
+
+  deploy:
+    name: Push to PWS
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pws-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Push to PWS
+        env:
+          PWS_URL: ${{ secrets.PWS_URL }}
+        run: |
+          if [ -z "$PWS_URL" ]; then
+            echo "::error::The PWS_URL secret is missing. Add it in the repo under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          # Push this commit to PWS's main branch
+          if ! push_output=$(git push "$PWS_URL" HEAD:main 2>&1); then
+            echo "Push failed with output: $push_output"
+            echo "Error: Unable to push changes. Please check the error message above and resolve any conflicts manually."
+            exit 1
+          fi
+          echo "Push successful with output: $push_output"

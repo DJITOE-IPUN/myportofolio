@@ -1,33 +1,13 @@
 {% extends "base.html" %}
+
 {% block meta %}
-    <title>Login - {{ name }}</title>
+    <title>Sign in - {{ name }}</title>
 {% endblock meta %}
+
+{% block body_class %}ab-page ab-inner ab-form-page{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="experience-section">
-            <div class="container">
-                <h1>Login</h1>
-                {% for message in messages %}
-                    <p class="form-message">{{ message }}</p>
-                {% endfor %}
-                <form method="post" action="{% url 'main:login' %}" class="project-form">
-                    {% csrf_token %}
-                    {% for field in form %}
-                        <div class="form-group">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% for error in field.errors %}
-                                <p class="form-error">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-                    {% for error in form.non_field_errors %}
-                        <p class="form-error">{{ error }}</p>
-                    {% endfor %}
-                    <button type="submit" class="button">Login</button>
-                </form>
-                <p>Belum punya akun? <a href="{% url 'main:register' %}">Daftar di sini</a>.</p>
-            </div>
-        </section>
-    </main>
+    {% url 'main:login' as action %}
+    {% url 'main:register' as alt_url %}
+    {% include "components/auth_panel.html" with code="AUTH-01" title="Sign in" lede="Identify yourself. Signed-in visitors can commend sorties and airframes." submit="Sign in" alt_text="No account yet?" alt_label="Request access" %}
 {% endblock content %}

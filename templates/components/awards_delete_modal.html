@@ -1,42 +1,31 @@
-<p class="experience-status">
-    <button type="button"
-            class="button button-danger"
-            popovertarget="delete-award-{{ award.id }}"
-            aria-label="Hapus {{ award.title }}"
-            title="Hapus penghargaan">
-        Hapus
-    </button>
-</p>
+{# Delete confirmation: native popover, no JavaScript needed. #}
+<button type="button"
+        class="ab-btn ab-btn-quiet ab-btn-danger"
+        popovertarget="delete-award-{{ award.id }}"
+        aria-label="Delete {{ award.title }}">
+    Scrub
+</button>
 <div id="delete-award-{{ award.id }}"
-     class="project-delete-modal"
+     class="ab-confirm"
      popover="auto"
-     role="dialog"
+     role="alertdialog"
      aria-modal="true"
-     aria-labelledby="delete-award-title-{{ award.id }}">
-    <button type="button"
-            class="project-delete-modal__backdrop"
-            popovertarget="delete-award-{{ award.id }}"
-            popovertargetaction="hide"
-            aria-label="Tutup konfirmasi hapus"></button>
-    <div class="project-delete-modal__content">
-        <button type="button"
-                class="project-delete-modal__close"
-                popovertarget="delete-award-{{ award.id }}"
-                popovertargetaction="hide"
-                aria-label="Tutup konfirmasi hapus">×</button>
-        <h2 id="delete-award-title-{{ award.id }}">Hapus Penghargaan?</h2>
-        <p>
-            Apakah Anda yakin ingin menghapus
-            <strong>{{ award.title }}</strong>?
+     aria-labelledby="delete-award-title-{{ award.id }}"
+     aria-describedby="delete-award-desc-{{ award.id }}">
+    <div class="ab-confirm-panel">
+        <p class="ab-confirm-code">CIT-DEL &middot; Irreversible</p>
+        <h2 class="ab-confirm-title" id="delete-award-title-{{ award.id }}">Strip this ribbon?</h2>
+        <p class="ab-confirm-desc" id="delete-award-desc-{{ award.id }}">
+            <strong>{{ award.title }}</strong> and its citation will be removed. This can't be undone.
         </p>
-        <div class="project-delete-modal__actions">
+        <div class="ab-confirm-actions">
             <button type="button"
-                    class="button button-secondary"
+                    class="ab-btn ab-btn-quiet"
                     popovertarget="delete-award-{{ award.id }}"
-                    popovertargetaction="hide">Batal</button>
+                    popovertargetaction="hide">Abort</button>
             <form method="post" action="{% url 'main:delete_award' award.id %}">
                 {% csrf_token %}
-                <button type="submit" class="button button-danger">Ya, Hapus</button>
+                <button type="submit" class="ab-btn ab-btn-alarm">Strip ribbon</button>
             </form>
         </div>
     </div>

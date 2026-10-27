@@ -6,7 +6,7 @@ from main.views import (
     delete_education, delete_project, delete_award,
     show_json_education, show_json_projects, show_json_awards, show_json_by_id,
     get_projects_json,
-    register, login_user, logout_user, toggle_star
+    register, login_user, logout_user, toggle_star, show_coolwall
 )
 
 app_name = 'main'
@@ -18,6 +18,7 @@ urlpatterns = [
     path('education/', show_education, name='show_education'),
     path('awards/', show_awards, name='show_awards'),
     path('projects/', show_projects, name='show_projects'),
+    path('cool-wall/', show_coolwall, name='show_coolwall'),
 
     # Create Routes
     path('education/create/', create_education, name='create_education'),

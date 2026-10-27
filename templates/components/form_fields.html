@@ -1,0 +1,20 @@
+{# Renders every field of `form` as an Afterburner field. Used by the record forms, the auth pages and the commission dialog. #}
+{% for error in form.non_field_errors %}
+    <p class="ab-form-alert" role="alert">{{ error }}</p>
+{% endfor %}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+{% for field in form.visible_fields %}
+    <div class="ab-field{% if field.errors %} has-error{% endif %}{% if field.widget_type == 'textarea' %} is-wide{% endif %}">
+        <label class="ab-field-label" for="{{ field.id_for_label }}">
+            <span class="ab-field-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
+            {{ field.label }}{% if field.field.required %}<span class="ab-field-req" aria-hidden="true">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}<div class="ab-field-help">{{ field.help_text|safe }}</div>{% endif %}
+        {% for error in field.errors %}
+            <p class="ab-field-error">{{ error }}</p>
+        {% endfor %}
+        {# filled in by AJAX forms (hangar.js, qualifications.js) when the server rejects a field #}
+        <p class="ab-field-error" id="error-{{ field.name }}" data-ab-error-for="{{ field.name }}" hidden></p>
+    </div>
+{% endfor %}

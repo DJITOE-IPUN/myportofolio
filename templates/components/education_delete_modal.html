@@ -1,42 +1,31 @@
-<p class="experience-status">
-    <button type="button"
-            class="button button-danger"
-            popovertarget="delete-education-{{ edu.id }}"
-            aria-label="Hapus {{ edu.institution }}"
-            title="Hapus riwayat pendidikan">
-        Hapus
-    </button>
-</p>
+{# Delete confirmation: native popover, no JavaScript needed. #}
+<button type="button"
+        class="ab-btn ab-btn-quiet ab-btn-danger"
+        popovertarget="delete-education-{{ edu.id }}"
+        aria-label="Delete {{ edu.institution }}">
+    Scrub
+</button>
 <div id="delete-education-{{ edu.id }}"
-     class="project-delete-modal"
+     class="ab-confirm"
      popover="auto"
-     role="dialog"
+     role="alertdialog"
      aria-modal="true"
-     aria-labelledby="delete-education-title-{{ edu.id }}">
-    <button type="button"
-            class="project-delete-modal__backdrop"
-            popovertarget="delete-education-{{ edu.id }}"
-            popovertargetaction="hide"
-            aria-label="Tutup konfirmasi hapus"></button>
-    <div class="project-delete-modal__content">
-        <button type="button"
-                class="project-delete-modal__close"
-                popovertarget="delete-education-{{ edu.id }}"
-                popovertargetaction="hide"
-                aria-label="Tutup konfirmasi hapus">×</button>
-        <h2 id="delete-education-title-{{ edu.id }}">Hapus Riwayat Pendidikan?</h2>
-        <p>
-            Apakah Anda yakin ingin menghapus
-            <strong>{{ edu.institution }}</strong>?
+     aria-labelledby="delete-education-title-{{ edu.id }}"
+     aria-describedby="delete-education-desc-{{ edu.id }}">
+    <div class="ab-confirm-panel">
+        <p class="ab-confirm-code">TR-DEL &middot; Irreversible</p>
+        <h2 class="ab-confirm-title" id="delete-education-title-{{ edu.id }}">Scrub this rating?</h2>
+        <p class="ab-confirm-desc" id="delete-education-desc-{{ edu.id }}">
+            <strong>{{ edu.institution }}</strong> will be removed from the record. This can't be undone.
         </p>
-        <div class="project-delete-modal__actions">
+        <div class="ab-confirm-actions">
             <button type="button"
-                    class="button button-secondary"
+                    class="ab-btn ab-btn-quiet"
                     popovertarget="delete-education-{{ edu.id }}"
-                    popovertargetaction="hide">Batal</button>
+                    popovertargetaction="hide">Abort</button>
             <form method="post" action="{% url 'main:delete_education' edu.id %}">
                 {% csrf_token %}
-                <button type="submit" class="button button-danger">Ya, Hapus</button>
+                <button type="submit" class="ab-btn ab-btn-alarm">Scrub rating</button>
             </form>
         </div>
     </div>

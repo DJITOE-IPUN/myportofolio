@@ -4,28 +4,9 @@
     <title>{{ title }} - {{ name }}</title>
 {% endblock meta %}
 
+{% block body_class %}ab-page ab-inner ab-form-page{% endblock body_class %}
+
 {% block content %}
-    <main>
-        <section class="experience-section">
-            <div class="container" style="max-width: 600px;">
-                <h1>{{ title|default:"Form Riwayat Pendidikan" }}</h1>
-                <form method="post" class="project-form">
-                    {% csrf_token %}
-                    {% for field in form %}
-                        <div class="form-group">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% for error in field.errors %}
-                                <p class="form-error" style="color: #ef4444; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-                    <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                        <button type="submit" class="button">Simpan</button>
-                        <a href="{% url 'main:show_education' %}" class="button button-secondary">Batal</a>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </main>
+    {% url 'main:show_education' as section_url %}
+    {% include "components/record_form.html" with section="Education" section_url=section_url %}
 {% endblock content %}
