@@ -1,0 +1,7 @@
+<div id="feedback" class="contacts-feedback is-{{ level|default:'success' }}" role="status"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if errors %}
+    {% for field, messages in errors.items %}{% for message in messages %}<p>{{ field|capfirst }}: {{ message }}</p>{% endfor %}{% endfor %}
+  {% else %}
+    <p>{{ message }}</p>
+  {% endif %}
+</div>

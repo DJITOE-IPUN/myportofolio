@@ -1,0 +1,24 @@
+<tr id="contact-{{ contact.id }}" class="is-editing">
+  <td><input type="text" name="name" value="{% firstof values.name contact.name %}" required maxlength="100" aria-label="Name" class="contacts-input" form="edit-form-{{ contact.id }}"></td>
+  <td><input type="email" name="email" value="{% firstof values.email contact.email %}" required aria-label="Email" class="contacts-input" form="edit-form-{{ contact.id }}"></td>
+  <td><input type="tel" name="phone" value="{% if values %}{{ values.phone }}{% else %}{{ contact.phone }}{% endif %}" maxlength="30" aria-label="Phone" class="contacts-input" form="edit-form-{{ contact.id }}"></td>
+  <td class="contacts-actions">
+    <form id="edit-form-{{ contact.id }}"
+          hx-put="{% url 'contacts:contact_update' contact.id %}"
+          hx-target="#contact-{{ contact.id }}"
+          hx-swap="outerHTML">
+      <button type="submit" class="ab-btn ab-btn-solid">Save</button>
+    </form>
+    <button type="button" class="ab-btn ab-btn-quiet"
+            hx-get="{% url 'contacts:contact_row' contact.id %}"
+            hx-target="#contact-{{ contact.id }}"
+            hx-swap="outerHTML">
+      Cancel
+    </button>
+    {% if errors %}
+      {% for field, messages in errors.items %}{% for message in messages %}
+        <p class="ab-field-error">{{ field|capfirst }}: {{ message }}</p>
+      {% endfor %}{% endfor %}
+    {% endif %}
+  </td>
+</tr>

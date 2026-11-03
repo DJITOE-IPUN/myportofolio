@@ -39,9 +39,9 @@
 
     <!-- ========== THE HANGAR ========== -->
     <section class="ab-section ab-hangar" id="projects" data-ab-waypoint="Bays" aria-labelledby="ab-hangar-title"
-             data-json-url="{% url 'main:show_json_projects' %}"
-             data-create-url="{% url 'main:create_project_ajax' %}"
-             data-star-url-template="{% url 'main:toggle_project_star' '00000000-0000-0000-0000-000000000000' %}"
+             data-list-url="{% url 'api:project-list' %}"
+             data-detail-url-template="{% url 'api:project-detail' '00000000-0000-0000-0000-000000000000' %}"
+             data-star-url-template="{% url 'api:project-star' '00000000-0000-0000-0000-000000000000' %}"
              data-edit-url-template="{% url 'main:edit_project' '00000000-0000-0000-0000-000000000000' %}"
              data-delete-url-template="{% url 'main:delete_project' '00000000-0000-0000-0000-000000000000' %}"
              data-login-url="{% url 'main:login' %}"
@@ -113,7 +113,7 @@
     {% include "components/projects_form_modal.html" %}
 {% endif %}
 
-<!-- Scrap confirmation shared by every bay; hangar.js points the form at the right airframe -->
+<!-- Scrap confirmation shared by every bay. hangar.js sends DELETE /api/v1/projects/<id>/; without JS the form posts to delete_project. -->
 {% if user.is_superuser %}
     <div id="ab-scrap-modal" class="ab-confirm" popover="auto" role="alertdialog" aria-modal="true" aria-labelledby="ab-scrap-title" aria-describedby="ab-scrap-desc">
         <div class="ab-confirm-panel">

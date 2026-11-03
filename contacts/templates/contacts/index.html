@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>Contacts - {{ name|default:"Michael Evan Putra Nugroho" }}</title>
+    <meta name="robots" content="noindex">
+    <style>
+        .contacts-panel { display: grid; gap: 1.25rem; }
+        .contacts-add { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .75rem; align-items: end; }
+        .contacts-input {
+            width: 100%; min-width: 0; padding: .6rem .7rem; font: inherit; font-size: .9rem;
+            color: var(--ab-text); background: var(--ab-glass); border: 1px solid var(--ab-border); border-radius: 0;
+        }
+        .contacts-input:focus { outline: none; border-color: var(--ab-text); }
+        .contacts-search { display: flex; align-items: center; gap: 1rem; }
+        .contacts-search .ab-query { flex: 1; }
+        .contacts-indicator { font-family: var(--ab-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ab-muted); }
+        .contacts-table-wrap { overflow-x: auto; border: 1px solid var(--ab-border); }
+        .contacts-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+        .contacts-table th {
+            text-align: left; padding: .7rem .9rem; font-family: var(--ab-mono); font-size: .7rem; font-weight: 500;
+            letter-spacing: .14em; text-transform: uppercase; color: var(--ab-dim); border-bottom: 1px solid var(--ab-border);
+        }
+        .contacts-table td { padding: .65rem .9rem; color: var(--ab-soft); border-bottom: 1px solid var(--ab-grid); vertical-align: middle; }
+        .contacts-table tbody tr:last-child td { border-bottom: 0; }
+        .contacts-table tr.is-editing td { background: var(--ab-panel); }
+        .contacts-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
+        .contacts-actions form { display: contents; }
+        .contacts-actions .ab-field-error { flex-basis: 100%; text-align: right; }
+        .contacts-empty td { color: var(--ab-dim); font-style: italic; }
+        /* the "No contacts." row hides itself once a row is appended next to it */
+        .contacts-empty:not(:only-child) { display: none; }
+        .contacts-feedback:empty { display: none; }
+        .contacts-feedback { font-family: var(--ab-mono); font-size: .8rem; letter-spacing: .04em; padding: .6rem .8rem; border-left: 2px solid var(--ab-text); color: var(--ab-text); background: var(--ab-panel); }
+        .contacts-feedback.is-error { border-left-color: var(--ab-red); }
+        .contacts-feedback p { margin: 0; }
+        @media (max-width: 720px) { .contacts-add { grid-template-columns: 1fr; } }
+    </style>
+{% endblock meta %}
+
+{% block body_class %}ab-page ab-inner ab-contacts-page{% endblock body_class %}
+
+{% block content %}
+{# hx-headers is inherited, so every HTMX request below carries the CSRF token #}
+<main class="ab-deck" id="ab-main" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    <header class="ab-pagehead" data-ab-waypoint="Brief">
+        <div class="ab-wrap ab-pagehead-grid">
+            <div class="ab-pagehead-copy">
+                <p class="ab-route"><a href="{% url 'main:show_main' %}">Base</a><span aria-hidden="true">/</span>Contacts</p>
+                <p class="ab-kicker">EXT-02 &middot; Tutorial 06 &middot; HTMX</p>
+                <h1 class="ab-page-title">Contacts</h1>
+            </div>
+            <div class="ab-pagehead-row">
+                <p class="ab-page-lede">Add, find, edit and delete without a single page reload. The server answers with HTML fragments, HTMX swaps them in.</p>
+            </div>
+        </div>
+    </header>
+
+    <section class="ab-section" data-ab-waypoint="Directory" aria-labelledby="contacts-title">
+        <div class="ab-wrap contacts-panel">
+            <header class="ab-section-head">
+                <span class="ab-section-index">EXT-02.1</span>
+                <h2 class="ab-section-title" id="contacts-title">Directory</h2>
+                <span class="ab-section-note">Owner only</span>
+            </header>
+
+            <form class="contacts-add"
+                  hx-post="{% url 'contacts:contact_add' %}"
+                  hx-target="#contact-rows"
+                  hx-swap="beforeend"
+                  hx-on::after-request="if (event.detail.successful && event.detail.xhr.getResponseHeader('HX-Reswap') !== 'none') this.reset()">
+                {% csrf_token %}
+                <label class="ab-field"><span class="ab-field-label">Name</span>
+                    <input type="text" name="name" placeholder="Name" required maxlength="100" class="contacts-input"></label>
+                <label class="ab-field"><span class="ab-field-label">Email</span>
+                    <input type="email" name="email" placeholder="name@example.com" required class="contacts-input"></label>
+                <label class="ab-field"><span class="ab-field-label">Phone</span>
+                    <input type="tel" name="phone" placeholder="Optional" maxlength="30" class="contacts-input"></label>
+                <button type="submit" class="ab-btn ab-btn-solid">Add contact</button>
+            </form>
+
+            <div id="feedback" class="contacts-feedback" role="status" aria-live="polite"></div>
+
+            <div class="contacts-search">
+                <label class="ab-query" role="search">
+                    <span class="ab-query-prompt">Find</span>
+                    <input type="search" name="q" placeholder="Search by name" class="ab-query-input" autocomplete="off"
+                           hx-get="{% url 'contacts:contact_search' %}"
+                           hx-trigger="keyup changed delay:300ms, search"
+                           hx-target="#contact-rows"
+                           hx-indicator="#search-indicator">
+                </label>
+                <span id="search-indicator" class="htmx-indicator contacts-indicator">Searching&hellip;</span>
+            </div>
+
+            <div class="contacts-table-wrap">
+                <table class="contacts-table">
+                    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Phone</th><th scope="col"><span class="ab-sr">Actions</span></th></tr></thead>
+                    <tbody id="contact-rows">
+                        {% include "contacts/_contact_rows.html" %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock content %}
+
+{% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js"></script>
+{% endblock scripts %}
