@@ -1,9 +1,13 @@
 /* =====================================================================
    HANGAR — the Projects page
-   Loads projects over AJAX (show_json_projects, which also says what the
-   visitor may do), live search, filter by system, commend without a
-   reload, commission over AJAX (create_project_ajax) with field errors
-   under each field, and a styled scrap confirmation.
+   Talks to the Django REST Framework API from Tutorial 07:
+     GET    /api/v1/projects/?title=…      list + live search
+     POST   /api/v1/projects/              commission (JSON body)
+     DELETE /api/v1/projects/<id>/         scrap (204, no body)
+     POST   /api/v1/projects/<id>/star/    commend toggle
+   Plus filter by system, field errors under each field, and a styled
+   scrap confirmation. What the visitor may do comes from the template;
+   the API's permission classes have the final say.
    ===================================================================== */
 (function () {
     'use strict';
@@ -14,11 +18,11 @@
     var AB = window.Afterburner || { announce: function () {}, lively: function () { return false; } };
     var DUMMY = '00000000-0000-0000-0000-000000000000';
     var cfg = {
-        json: section.dataset.jsonUrl,
-        create: section.dataset.createUrl,
+        list: section.dataset.listUrl,
+        detail: section.dataset.detailUrlTemplate,
         star: section.dataset.starUrlTemplate,
         edit: section.dataset.editUrlTemplate,
-        del: section.dataset.deleteUrlTemplate,
+        del: section.dataset.deleteUrlTemplate,  // no-JS fallback for the scrap form
         login: section.dataset.loginUrl,
         isAuth: section.dataset.isAuth === 'true',
         isEditor: section.dataset.isEditor === 'true',
@@ -48,20 +52,52 @@
         scrapName: document.getElementById('ab-scrap-name')
     };
 
-    var projects = [];       // last response from the server (already filtered by title)
+    var projects = [];       // last response from the API (already filtered by title)
     var systemFilter = '';   // client-side filter by one tech-stack item
     var abort = null;
     var debounce = null;
-    var csrf = (document.querySelector('#csrf-token-form [name=csrfmiddlewaretoken]') || {}).value || getCookie('csrftoken');
-
     function getCookie(name) {
         var match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
         return match ? decodeURIComponent(match[1]) : null;
     }
+    // The cookie is the source of truth; the hidden {% csrf_token %} form only makes sure it exists.
+    function csrfToken() {
+        return getCookie('csrftoken') || (document.querySelector('#csrf-token-form [name=csrfmiddlewaretoken]') || {}).value || '';
+    }
+
+    /* ---------- one place for every write (POST / DELETE) ----------
+       Sends JSON with the CSRF token, returns the parsed body (null for 204),
+       throws an Error whose .fields holds DRF's per-field messages. */
+    function apiErrorMessage(data, status) {
+        if (data && typeof data.detail === 'string') return data.detail;
+        var messages = [];
+        Object.keys(data || {}).forEach(function (k) { [].concat(data[k]).forEach(function (m) { if (typeof m === 'string') messages.push(m); }); });
+        return messages.join(' ') || 'Request failed (HTTP ' + status + ').';
+    }
+
+    function writeProject(target, method, payload) {
+        return fetch(target, {
+            method: method,
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: payload === undefined ? undefined : JSON.stringify(payload),
+            credentials: 'same-origin'
+        }).then(function (res) {
+            if (res.status === 204) return null;
+            return res.json().catch(function () { return {}; }).then(function (data) {
+                if (!res.ok) {
+                    var err = new Error(apiErrorMessage(data, res.status));
+                    err.status = res.status;
+                    err.fields = data && typeof data.detail !== 'string' ? data : {};
+                    throw err;
+                }
+                return data;
+            });
+        });
+    }
 
     function pad2(n) { return n < 10 ? '0' + n : String(n); }
     function url(template, id) { return template.replace(DUMMY, id); }
-    function systemsOf(p) { return (p.fields.tech_stack || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+    function systemsOf(p) { return (p.tech_stack || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
 
     function make(tag, cls, text) {
         var node = document.createElement(tag);
@@ -110,8 +146,8 @@
     }
 
     /* ---------- one bay ---------- */
-    function bay(item, index) {
-        var p = item.fields, id = item.pk;
+    function bay(p, index) {
+        var id = p.id;
         var article = make('article', 'ab-bay');
         article.style.setProperty('--i', index);
 
@@ -136,7 +172,7 @@
         var body = make('div', 'ab-bay-body');
         body.appendChild(make('h3', 'ab-bay-title', p.title));
         if (p.description) body.appendChild(make('p', 'ab-bay-desc', p.description));
-        var systems = systemsOf(item);
+        var systems = systemsOf(p);
         if (systems.length) {
             var list = make('ul', 'ab-bay-systems');
             list.setAttribute('aria-label', 'Systems');
@@ -168,7 +204,7 @@
             commend = make('button', 'ab-commend' + (p.is_starred ? ' is-on' : ''));
             commend.type = 'button';
             commend.setAttribute('aria-pressed', String(!!p.is_starred));
-            commend.addEventListener('click', function () { toggleStar(item, commend); });
+            commend.addEventListener('click', function () { toggleStar(p, commend); });
         } else {
             commend = make('a', 'ab-commend');
             commend.href = cfg.login;
@@ -192,7 +228,7 @@
                 var scrap = make('button', 'ab-btn ab-btn-quiet ab-btn-danger', 'Scrap');
                 scrap.type = 'button';
                 scrap.setAttribute('aria-label', 'Delete ' + p.title);
-                scrap.addEventListener('click', function () { openScrap(item); });
+                scrap.addEventListener('click', function () { openScrap(p); });
                 maint.appendChild(scrap);
             }
             foot.appendChild(maint);
@@ -213,7 +249,7 @@
         var stars = 0;
         projects.forEach(function (p) {
             systemsOf(p).forEach(function (s) { allSystems[s.toLowerCase()] = true; });
-            stars += p.fields.star_count || 0;
+            stars += p.star_count || 0;
         });
         setStat('airframes', pad2(projects.length));
         setStat('systems', pad2(Object.keys(allSystems).length));
@@ -260,34 +296,6 @@
         AB.announce(systemFilter ? 'Showing projects using ' + systemFilter : 'Filter cleared');
     }
 
-    /* ---------- accept both JSON shapes ----------
-       show_json_projects: { projects: [{id, title, …, total_stars, is_starred}], user_permissions }
-       get_projects_json:  [{pk, fields: {title, …, star_count, is_starred, starred_by_names}}] */
-    function normalise(data) {
-        if (Array.isArray(data)) return data;
-        var perms = data && data.user_permissions;
-        if (perms) {
-            cfg.isAuth = !!perms.is_authenticated;
-            cfg.isEditor = !!perms.is_editor;
-            cfg.isSuperuser = !!perms.is_superuser;
-        }
-        return ((data && data.projects) || []).map(function (p) {
-            return {
-                pk: p.id,
-                fields: {
-                    title: p.title,
-                    description: p.description,
-                    tech_stack: p.tech_stack,
-                    project_url: p.project_url,
-                    project_image_url: p.project_image_url,
-                    star_count: p.total_stars || 0,
-                    is_starred: !!p.is_starred,
-                    starred_by_names: p.starred_by_names || ''
-                }
-            };
-        });
-    }
-
     /* ---------- load ---------- */
     function load(query) {
         if (abort) abort.abort();
@@ -295,11 +303,12 @@
         if (!el.grid.children.length) show('loading');
         el.note.textContent = 'Scanning…';
 
-        var target = cfg.json + '?title=' + encodeURIComponent(query || '');
+        var target = new URL(cfg.list, window.location.origin);
+        if (query) target.searchParams.set('title', query);
         fetch(target, { headers: { 'Accept': 'application/json' }, signal: abort ? abort.signal : undefined, credentials: 'same-origin' })
             .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
             .then(function (data) {
-                projects = normalise(data);
+                projects = Array.isArray(data) ? data : [];
                 render();
             })
             .catch(function (err) {
@@ -329,45 +338,64 @@
     if (el.filterClear) el.filterClear.addEventListener('click', function () { setFilter(systemFilter); });
     if (el.retry) el.retry.addEventListener('click', function () { load(el.input.value.trim()); });
 
-    /* ---------- commend ---------- */
-    function toggleStar(item, btn) {
-        if (btn.getAttribute('aria-busy') === 'true') return;
+    /* ---------- commend (POST /api/v1/projects/<id>/star/, a toggle) ---------- */
+    function toggleStar(p, btn) {
+        if (btn.getAttribute('aria-busy') === 'true') return;  // no double toggles, no retries
         btn.setAttribute('aria-busy', 'true');
-        var body = new FormData();
-        body.append('csrfmiddlewaretoken', csrf);
-        fetch(url(cfg.star, item.pk), {
-            method: 'POST',
-            body: body,
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRFToken': csrf },
-            credentials: 'same-origin'
-        }).then(function (res) {
-            if (!res.ok || (res.headers.get('content-type') || '').indexOf('application/json') === -1) throw new Error('HTTP ' + res.status);
-            return res.json();
-        }).then(function (data) {
-            item.fields.is_starred = data.starred;
-            item.fields.star_count = data.count;
-            btn.classList.toggle('is-on', data.starred);
-            btn.setAttribute('aria-pressed', String(data.starred));
-            btn.querySelector('.ab-commend-label').textContent = data.starred ? 'Commended' : 'Commend';
-            btn.querySelector('.ab-commend-count').textContent = pad2(data.count);
-            var total = projects.reduce(function (sum, p) { return sum + (p.fields.star_count || 0); }, 0);
+        writeProject(url(cfg.star, p.id), 'POST').then(function (data) {
+            // the API answers with the whole project, so copy the fresh numbers over
+            p.is_starred = !!data.is_starred;
+            p.star_count = data.star_count || 0;
+            p.starred_by_names = data.starred_by_names || '';
+            btn.classList.toggle('is-on', p.is_starred);
+            btn.setAttribute('aria-pressed', String(p.is_starred));
+            btn.querySelector('.ab-commend-label').textContent = p.is_starred ? 'Commended' : 'Commend';
+            btn.querySelector('.ab-commend-count').textContent = pad2(p.star_count);
+            if (p.star_count) btn.title = 'Commended by ' + p.starred_by_names; else btn.removeAttribute('title');
+            var total = projects.reduce(function (sum, q) { return sum + (q.star_count || 0); }, 0);
             setStat('stars', pad2(total));
-            AB.announce(data.starred ? 'Commended ' + item.fields.title : 'Commendation withdrawn');
-        }).catch(function () {
-            if (typeof showToast === 'function') showToast('Alert', 'That commendation didn’t get through. Try again.', 'error');
+            AB.announce(p.is_starred ? 'Commended ' + p.title : 'Commendation withdrawn');
+        }).catch(function (err) {
+            if (typeof showToast === 'function') showToast('Alert', 'That commendation didn’t get through. ' + (err.message || 'Try again.'), 'error');
         }).then(function () { btn.removeAttribute('aria-busy'); });
     }
 
-    /* ---------- scrap ---------- */
-    function openScrap(item) {
-        el.scrapForm.action = url(cfg.del, item.pk);
-        el.scrapName.textContent = item.fields.title;
+    /* ---------- scrap (DELETE /api/v1/projects/<id>/) ---------- */
+    var scrapping = null;
+    function openScrap(p) {
+        scrapping = p;
+        el.scrapForm.action = url(cfg.del, p.id);  // fallback if the fetch below never runs
+        el.scrapName.textContent = p.title;
         if (el.scrapModal.showPopover) el.scrapModal.showPopover();
-        else if (window.confirm('Scrap ' + item.fields.title + '?')) el.scrapForm.submit();
+        else if (window.confirm('Scrap ' + p.title + '?')) scrap();
     }
 
-    /* ---------- commission (AJAX create) ---------- */
-    if (el.createForm && cfg.create) {
+    function scrap() {
+        if (!scrapping) return;
+        var p = scrapping;
+        var submit = el.scrapForm.querySelector('button[type="submit"]');
+        if (submit) submit.disabled = true;
+        writeProject(url(cfg.detail, p.id), 'DELETE').then(function () {
+            if (el.scrapModal.hidePopover && el.scrapModal.matches(':popover-open')) el.scrapModal.hidePopover();
+            if (typeof showToast === 'function') showToast('Confirmed', p.title + ' scrapped. The bay is free.', 'success');
+            scrapping = null;
+            load(el.input.value.trim());
+        }).catch(function (err) {
+            if (typeof showToast === 'function') showToast('Scrap failed', err.message || 'Try again.', 'error');
+        }).then(function () { if (submit) submit.disabled = false; });
+    }
+
+    if (el.scrapForm) {
+        el.scrapForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            scrap();
+        });
+    }
+
+    /* ---------- commission (POST /api/v1/projects/ with JSON) ---------- */
+    var FIELDS = ['title', 'description', 'tech_stack', 'project_url', 'project_image_url'];
+
+    if (el.createForm && cfg.list) {
         function clearErrors() {
             el.createForm.querySelectorAll('[data-ab-error-for]').forEach(function (p) { p.textContent = ''; p.hidden = true; });
             el.createForm.querySelectorAll('.ab-field.has-error').forEach(function (f) { f.classList.remove('has-error'); });
@@ -379,33 +407,26 @@
             var submit = el.createForm.querySelector('button[type="submit"]');
             submit.disabled = true;
             clearErrors();
-            fetch(cfg.create, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') || csrf },
-                body: new FormData(el.createForm),
-                credentials: 'same-origin'
-            }).then(function (res) {
-                return res.json().catch(function () { return {}; }).then(function (result) { return { res: res, result: result }; });
-            }).then(function (r) {
-                if (r.res.ok) {
-                    el.createForm.reset();
-                    if (el.createModal && el.createModal.hidePopover) el.createModal.hidePopover();
-                    if (typeof showToast === 'function') showToast('Confirmed', r.result.message || 'Airframe commissioned. It’s in the hangar.', 'success');
-                    load(el.input.value.trim());
-                } else {
-                    // errors arrive as {field: ["message", …]} (form.errors) or {field: [{message}]}
-                    var errors = r.result.errors || {};
-                    Object.keys(errors).forEach(function (name) {
-                        var text = [].concat(errors[name]).map(function (m) { return typeof m === 'string' ? m : (m && m.message) || ''; }).join(' ');
-                        var slot = el.createForm.querySelector('[data-ab-error-for="' + name + '"]');
-                        if (slot) { slot.textContent = text; slot.hidden = false; slot.closest('.ab-field').classList.add('has-error'); }
-                    });
-                    var first = el.createForm.querySelector('.ab-field.has-error input, .ab-field.has-error textarea');
-                    if (first) first.focus();
-                    if (typeof showToast === 'function') showToast('Commission failed', r.result.error || r.result.message || 'Something went wrong (status ' + r.res.status + ').', 'error', 5000);
-                }
-            }).catch(function () {
-                if (typeof showToast === 'function') showToast('Commission failed', 'Couldn’t reach the server. Try again.', 'error');
+            // only the five model fields, so the form's CSRF input isn't sent as data
+            var fields = new FormData(el.createForm);
+            var payload = {};
+            FIELDS.forEach(function (name) { payload[name] = fields.get(name) || ''; });
+
+            writeProject(cfg.list, 'POST', payload).then(function (project) {
+                el.createForm.reset();
+                if (el.createModal && el.createModal.hidePopover) el.createModal.hidePopover();
+                if (typeof showToast === 'function') showToast('Confirmed', project.title + ' commissioned. It’s in the hangar.', 'success');
+                load(el.input.value.trim());
+            }).catch(function (err) {
+                // DRF validation errors arrive as {field: ["message", …]}
+                var errors = err.fields || {};
+                Object.keys(errors).forEach(function (name) {
+                    var slot = el.createForm.querySelector('[data-ab-error-for="' + name + '"]');
+                    if (slot) { slot.textContent = [].concat(errors[name]).join(' '); slot.hidden = false; slot.closest('.ab-field').classList.add('has-error'); }
+                });
+                var first = el.createForm.querySelector('.ab-field.has-error input, .ab-field.has-error textarea');
+                if (first) first.focus();
+                if (typeof showToast === 'function') showToast('Commission failed', err.status ? err.message : 'Couldn’t reach the server. Try again.', 'error', 5000);
             }).then(function () { submit.disabled = false; });
         });
     }
