@@ -47,6 +47,12 @@ class Education(models.Model):
     date_range = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
+    # Tugas 6: Education is the section built in Tugas 3-5, so it gets the star relation here
+    stars = models.ManyToManyField(User, related_name='starred_educations', blank=True)
+
+    def total_stars(self):
+        return self.stars.count()
+
     def __str__(self):
         return f"{self.get_degree_display()} - {self.institution}"
 
