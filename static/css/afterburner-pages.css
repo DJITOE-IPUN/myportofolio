@@ -806,6 +806,27 @@ html[data-clearance="classified"] .ab-flight-track.is-armed:not(.is-drawn) .ab-f
     border-top: 1px solid var(--ab-border);
 }
 
+/* Tugas 6: endorse (star) + maintenance share one footer row */
+.ab-rating-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-top: auto;
+    padding-top: .9rem;
+    border-top: 1px solid var(--ab-border);
+}
+
+.ab-rating-actions .ab-rating-maint {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+}
+
+.ab-commend.is-static { cursor: default; }
+.ab-commend.is-static:hover { color: var(--ab-soft); border-color: var(--ab-border-hi); }
+.ab-commend[aria-busy="true"] { opacity: .6; pointer-events: none; }
+
 /* =====================================================================
    7. Ribbon rack
    ===================================================================== */

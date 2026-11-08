@@ -14,7 +14,7 @@
         {% for error in field.errors %}
             <p class="ab-field-error">{{ error }}</p>
         {% endfor %}
-        {# filled in by AJAX forms (hangar.js, qualifications.js) when the server rejects a field #}
-        <p class="ab-field-error" id="error-{{ field.name }}" data-ab-error-for="{{ field.name }}" hidden></p>
+        {# filled in by AJAX forms (hangar.js, qualifications.js) when the server rejects a field; html_name keeps ids unique when a form has a prefix #}
+        <p class="ab-field-error" id="error-{{ field.html_name }}" data-ab-error-for="{{ field.name }}" hidden></p>
     </div>
 {% endfor %}

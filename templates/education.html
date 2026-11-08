@@ -44,11 +44,18 @@
     {#  CLASSIFIED — type-rating cards                                     #}
     {# ================================================================== #}
     <div class="ab-classified">
+        {# Tugas 6: qualifications.js talks to the REST API (main/api_views.py). The role flags only decide which   #}
+        {# buttons are drawn; IsPortfolioOwnerOrEditorOrReadOnly on the server has the final say.                  #}
         <section class="ab-section ab-ratings-section" id="ratings" data-ab-waypoint="Ratings" aria-labelledby="ab-ratings-title"
-                 data-json-url="{% url 'main:show_json_education' %}"
-                 data-create-url="{% url 'main:create_education_ajax' %}"
+                 data-list-url="{% url 'api:education-list' %}"
+                 data-detail-url-template="{% url 'api:education-detail' '00000000-0000-0000-0000-000000000000' %}"
+                 data-star-url-template="{% url 'api:education-star' '00000000-0000-0000-0000-000000000000' %}"
                  data-edit-url-template="{% url 'main:edit_education' '00000000-0000-0000-0000-000000000000' %}"
-                 data-delete-url-template="{% url 'main:delete_education' '00000000-0000-0000-0000-000000000000' %}">
+                 data-delete-url-template="{% url 'main:delete_education' '00000000-0000-0000-0000-000000000000' %}"
+                 data-login-url="{% url 'main:login' %}"
+                 data-is-auth="{{ user.is_authenticated|yesno:'true,false' }}"
+                 data-is-editor="{{ is_editor|yesno:'true,false' }}"
+                 data-is-superuser="{{ user.is_superuser|yesno:'true,false' }}">
             <div class="ab-wrap">
                 <header class="ab-section-head">
                     <span class="ab-section-index">SEC-03.1</span>
@@ -114,12 +121,20 @@
                                     {% if qual.obj.description %}<p class="ab-rating-notes">{{ qual.obj.description }}</p>{% endif %}
 
 
-                                    {% if is_editor or user.is_superuser %}
-                                        <footer class="ab-rating-maint">
-                                            {% if is_editor %}<a href="{% url 'main:edit_education' qual.obj.id %}" class="ab-btn ab-btn-quiet">Edit</a>{% endif %}
-                                            {% if user.is_superuser %}{% include "components/education_delete_modal.html" with edu=qual.obj %}{% endif %}
-                                        </footer>
-                                    {% endif %}
+                                    <footer class="ab-rating-actions">
+                                        {# No-JS view of the star count; qualifications.js swaps in the live toggle #}
+                                        <span class="ab-commend is-static" title="Endorsements">
+                                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6 4.1 13.8 5 9.4 1.7 6.4l4.4-.5Z"/></svg>
+                                            <span class="ab-commend-label">Endorse</span>
+                                            <span class="ab-commend-count">{{ qual.obj.stars.all|length|stringformat:"02d" }}</span>
+                                        </span>
+                                        {% if is_editor %}
+                                            <span class="ab-rating-maint">
+                                                <a href="{% url 'main:edit_education' qual.obj.id %}" class="ab-btn ab-btn-quiet">Edit</a>
+                                                {% if user.is_superuser %}{% include "components/education_delete_modal.html" with edu=qual.obj %}{% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </footer>
                                 </div>
                             </article>
                         {% endfor %}
@@ -132,12 +147,38 @@
                         <p class="ab-empty-note">Ground school is in session.</p>
                     </div>
                 {% endif %}
+                {# Makes sure the csrftoken cookie exists for every role (star, edit and scrub go through fetch) #}
+                <form id="csrf-token-form" hidden>{% csrf_token %}</form>
             </div>
         </section>
     </div>
 
+    {% if is_editor %}
+        <!-- Edit qualification: PATCH /api/v1/education/<id>/ with only the changed fields (Editor and owner) -->
+        <div id="edit-education-modal" class="ab-dialog" popover="auto" role="dialog" aria-modal="true" aria-labelledby="edit-education-title">
+            <div class="ab-dialog-panel">
+                <header class="ab-dialog-head">
+                    <span>TR-EDIT <span class="ab-dim">// <span id="edit-education-code">Amend rating</span></span></span>
+                    <button type="button" class="ab-dialog-close" popovertarget="edit-education-modal" popovertargetaction="hide" aria-label="Close">Esc</button>
+                </header>
+                <h2 class="ab-dialog-title" id="edit-education-title">Amend qualification</h2>
+                <p class="ab-dialog-note">Only the fields you change are sent. Fields marked <span class="ab-field-req">*</span> can't be left empty.</p>
+                <form id="edit-education-form" method="post" action="" class="ab-form" data-prefix="edit-">
+                    {% csrf_token %}
+                    <div class="ab-form-fields">
+                        {% include "components/form_fields.html" with form=edit_form %}
+                    </div>
+                    <div class="ab-form-actions">
+                        <button type="button" class="ab-btn ab-btn-quiet" popovertarget="edit-education-modal" popovertargetaction="hide">Abort</button>
+                        <button type="submit" class="ab-btn ab-btn-solid">Save amendment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
     {% if user.is_superuser %}
-        <!-- Add qualification over AJAX (create_education_ajax); the Full form link is the no-JS route -->
+        <!-- Add qualification: POST /api/v1/education/ as JSON; the Full form link is the no-JS route -->
         <div id="add-education-modal" class="ab-dialog" popover="auto" role="dialog" aria-modal="true" aria-labelledby="add-education-title">
             <div class="ab-dialog-panel">
                 <header class="ab-dialog-head">
@@ -159,7 +200,7 @@
             </div>
         </div>
 
-        <!-- Scrub confirmation shared by cards drawn over AJAX -->
+        <!-- Scrub confirmation shared by cards drawn over AJAX: DELETE /api/v1/education/<id>/ (204) -->
         <div id="ab-scrub-modal" class="ab-confirm" popover="auto" role="alertdialog" aria-modal="true" aria-labelledby="ab-scrub-title" aria-describedby="ab-scrub-desc">
             <div class="ab-confirm-panel">
                 <p class="ab-confirm-code">TR-DEL &middot; Irreversible</p>

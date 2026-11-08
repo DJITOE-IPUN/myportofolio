@@ -6,6 +6,7 @@ from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from main.models import Education, Project, Award, Experience
@@ -69,15 +70,18 @@ def show_experience(request):
     }
     return render(request, "experience.html", context)
 
+@ensure_csrf_cookie  # star/edit go through fetch() for every role, so everyone needs the csrftoken cookie
 def show_education(request):
     # Afterburner "Qualifications". The cards are rendered here first (so the page
-    # works without JavaScript), then qualifications.js keeps them live over AJAX:
-    # show_json_education for the list and search, create_education_ajax for adding.
+    # works without JavaScript), then qualifications.js keeps them live through the
+    # Tugas 6 REST API at /api/v1/education/ (list + search, add, edit, star, scrub).
     title_query = request.GET.get('title', '')
-    qualifications = build_qualifications(Education.objects.all())
+    qualifications = build_qualifications(Education.objects.prefetch_related('stars'))
     context = {
         'name': NAME,
         'form': EducationForm(),
+        # Same fields under an "edit-" prefix, so the edit dialog's ids don't clash with the add dialog's
+        'edit_form': EducationForm(prefix='edit'),
         'title': title_query,
         'is_editor': check_is_editor(request.user),
         'education_list': [qual['obj'] for qual in qualifications],
@@ -297,9 +301,8 @@ def show_json_education(request):
             'semester': qual['semester'],
             'semesters': qual['semesters'],
             'progress': qual['progress'],
-            # Education has no stars field; kept for a consistent JSON shape
-            'total_stars': 0,
-            'is_starred': False,
+            'total_stars': edu.stars.count(),
+            'is_starred': request.user.is_authenticated and edu.stars.filter(pk=request.user.pk).exists(),
         })
 
     return JsonResponse({
