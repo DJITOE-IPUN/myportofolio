@@ -40,7 +40,7 @@
    ```bash
    python manage.py test main
    ```
-   Termasuk test API dari Tutorial 07 dan Tugas 6 di `main/tests_api.py`.
+   Termasuk test API dari Tutorial 07, Tugas 6, dan Tutorial 10 (login token) di `main/tests_api.py`.
 
 6. **Jalankan Development Server**
    ```bash
@@ -531,5 +531,31 @@ Dalam proses pengembangan Tugas 6, ditemukan 3 keterbatasan AI yang berhasil dii
 
 ##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
 Seluruh penambahan relasi `stars` pada `Education`, pembuatan `EducationSerializer` beserta validasi `validate_<field>()`, penerapan permission class 4 peran, API view berbasis fungsi di `main/api_views.py`, rute `/api/v1/education/` di `main/api_urls.py`, integrasi halaman Qualifications (modal edit `PATCH`, Toast, *header* `X-CSRFToken`), hingga 78 kasus uji pada `python manage.py test main` telah diverifikasi, diuji, dan dipastikan berjalan stabil di lingkungan lokal.
+
+---
+
+### Tutorial 10: Backend untuk Aplikasi Flutter (Token Auth dan CORS)
+
+Aplikasi mobile [DJITOE-IPUN/myportofolio_mobile](https://github.com/DJITOE-IPUN/myportofolio_mobile) memakai API ini. Perubahan di repositori Django:
+
+* **`requirements.txt`**: menambah `django-cors-headers`.
+* **`portofolio/settings.py`**:
+  - `rest_framework.authtoken` dan `corsheaders` ditambahkan ke `INSTALLED_APPS` (jalankan `python manage.py migrate` untuk membuat tabel `authtoken_token`).
+  - `CorsMiddleware` diletakkan paling atas di `MIDDLEWARE`, sebelum `WhiteNoiseMiddleware` dan `CommonMiddleware`, agar respons dari keduanya juga mendapat header CORS.
+  - `REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]` berisi `TokenAuthentication` lalu `SessionAuthentication`. Aplikasi Flutter mengirim `Authorization: Token <key>`, sedangkan halaman web dan Browsable API tetap memakai cookie sesi beserta CSRF.
+  - `CORS_ALLOW_ALL_ORIGINS` bernilai `True` hanya di luar produksi (bisa diubah lewat variabel lingkungan `CORS_ALLOW_ALL_ORIGINS`). CORS hanya dibutuhkan Flutter Web di Chrome; aplikasi Android tidak terikat aturan CORS.
+* **`main/api_views.py`**: semua API view memakai `API_AUTHENTICATION = [TokenAuthentication, SessionAuthentication]`, karena dekorator `@authentication_classes` menimpa pengaturan default. View baru `api_logout` menghapus token pemanggil (`request.auth`) dan membalas `204 No Content`.
+* **`main/api_urls.py`**: `auth/token/` (view bawaan DRF `obtain_auth_token`) dan `auth/logout/`.
+
+| Method | Path | Autentikasi | Tujuan |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/projects/` | Publik | Menampilkan seluruh proyek |
+| `POST` | `/api/v1/projects/` | `Authorization: Token <key>` | Membuat proyek baru (superuser) |
+| `POST` | `/api/v1/auth/token/` | Publik | Menukar username + password menjadi token |
+| `POST` | `/api/v1/auth/logout/` | `Authorization: Token <key>` | Mencabut token saat ini (`204 No Content`) |
+
+**Mengapa `TokenAuthentication` diletakkan pertama**: DRF menentukan kode status untuk request tanpa kredensial dari kelas autentikasi pertama. `SessionAuthentication` tidak punya header `WWW-Authenticate`, sehingga request tanpa login atau dengan token yang sudah dicabut dijawab `403`. Dengan `TokenAuthentication` di urutan pertama, jawabannya `401` dengan `WWW-Authenticate: Token`, sehingga aplikasi Flutter bisa membedakan "harus login ulang" (`401`) dari "akun ini tidak punya izin" (`403`). Karena itu test lama yang memeriksa penulisan oleh tamu kini mengharapkan `401`, sedangkan pengguna yang sudah login tanpa izin tetap `403`.
+
+**Verifikasi**: kelas `TokenAuthAPITest` di `main/tests_api.py` menguji login token, kredensial salah, `POST` dengan token tanpa CSRF, token tidak valid (`401`), token akun biasa (`403`), logout yang menghapus token, dan header CORS untuk Flutter Web. Seluruh 100 test `python manage.py test` lolos, dan alurnya juga dicoba dengan `curl` pada server lokal.
 
 ---
