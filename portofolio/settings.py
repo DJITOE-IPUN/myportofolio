@@ -43,12 +43,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'main',
     'contacts',
     'rest_framework',
+    # Tutorial 10: tokens for the Flutter app (Authorization: Token <key>)
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
+    # Tutorial 10: CORS goes first, before anything that can return a response
+    # (WhiteNoise, CommonMiddleware), so those responses get CORS headers too.
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -153,4 +159,24 @@ MAILERS = {
     },
 }
 
-CSRF_TRUSTED_ORIGINS = ["https://michael-evan51-myportofolio.pws.cs.ui.ac.id"]
+CSRF_TRUSTED_ORIGINS = ["https://michael-evan51-myportofolio.pws.cs.ui.ac.id"]
+
+# Tutorial 10: Django REST Framework authentication
+# The Flutter app sends "Authorization: Token <key>"; the web pages and the
+# Browsable API keep using the session cookie (with CSRF). TokenAuthentication
+# comes first so a request without valid credentials gets 401 with a
+# "WWW-Authenticate: Token" header, which tells the app to log in again.
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+}
+
+# Tutorial 10: CORS for Flutter Web (flutter run -d chrome) during development.
+# Allowed by default only outside production; set CORS_ALLOW_ALL_ORIGINS in the
+# deployment's environment to change it there. The Android app does not need
+# CORS at all, because CORS is a browser rule.
+CORS_ALLOW_ALL_ORIGINS = os.getenv(
+    'CORS_ALLOW_ALL_ORIGINS', 'False' if PRODUCTION else 'True'
+).lower() == 'true'
