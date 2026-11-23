@@ -38,8 +38,9 @@
 
 5. **Jalankan Unit Test**
    ```bash
-   python manage.py test
+   python manage.py test main
    ```
+   Termasuk test API dari Tutorial 07 dan Tugas 6 di `main/tests_api.py`.
 
 6. **Jalankan Development Server**
    ```bash
@@ -420,3 +421,115 @@ Dalam proses pengembangan Tugas 5, ditemukan 3 keterbatasan AI yang berhasil dii
 
 ##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
 Seluruh sanitasi XSS server-side pada `EducationForm`, pembuatan *endpoint* JSON & AJAX view di `main/views.py`, rute URL di `main/urls.py`, pembuatan kerangka UI modal form & toast notification, penulisan fungsi JS `fetch()`, *debounced search*, *CSRF token handling*, hingga sanitasi client-side `escapeHtml()` di `templates/education.html` telah diverifikasi, diuji, dan dipastikan berjalan 100% stabil di lingkungan lokal.
+
+---
+
+### Tugas 6: Django REST Framework Implementation
+
+#### Ringkasan Perubahan Tugas 6
+Pada Tugas 6, pola API dari Tutorial 07 (serializer, permission class, API view, dan `APITestCase`) diterapkan secara *end-to-end* pada modul **Education**, yaitu bagian yang dikerjakan sendiri sejak Tugas 3 sampai Tugas 5:
+
+1. **Relasi Model Data & Migrasi (`stars`)**:
+   - Model `Education` belum memiliki relasi *star* dari Tugas 4, sehingga ditambahkan `stars = models.ManyToManyField(User, related_name='starred_educations')` beserta migrasi `0011_education_stars`.
+2. **Serializer & Validasi Input (`main/serializers.py`)**:
+   - `EducationSerializer` (`ModelSerializer`) dengan daftar `fields` yang ditulis eksplisit (bukan `"__all__"`).
+   - Field hasil perhitungan bersifat *read-only*: `degree_display`, `star_count`, `is_starred`, serta `qualification` (kode `TR-xx`, status, semester, dan progres kartu). Data akun sensitif seperti email dan *password hash* tidak pernah ikut tampil.
+   - Method `validate_institution`, `validate_field_of_study`, `validate_date_range`, dan `validate_description` membersihkan input dengan `strip_tags()` (sama seperti `clean_<field>()` pada Tugas 5) dan menolak teks yang kosong setelah dibersihkan. `date_range` juga wajib memuat tahun karena status dan semester kartu dihitung dari teks tersebut.
+3. **Otorisasi 4 Peran via Permission Class (`main/permissions.py`)**:
+   - **Pengunjung (Guest)**: Dapat membaca daftar dan detail data. Seluruh permintaan yang mengubah data ditolak dengan HTTP `403 Forbidden`.
+   - **Pengguna Biasa (Logged-in User)**: Memiliki hak pengunjung serta dapat memberi/membatalkan *star*.
+   - **Editor**: Memiliki hak pengguna biasa serta dapat mengubah data via `PUT`/`PATCH`, namun ditolak HTTP `403 Forbidden` saat membuat (`POST`) atau menghapus (`DELETE`) data. Peran dikelola via Django Group `Editor`.
+   - **Pemilik Portofolio (Superuser)**: Dapat membuat, mengubah, dan menghapus data, serta memberi/membatalkan *star*.
+   - Endpoint daftar dan detail memakai `IsPortfolioOwnerOrEditorOrReadOnly`, sedangkan endpoint *star* memakai `IsAuthenticated` dengan akun pemberi *star* selalu diambil dari `request.user`. View lama (`create_education`, `edit_education`, `delete_education`) sudah konsisten dengan aturan ini.
+4. **API View & URL Routing (`main/api_views.py`, `main/api_urls.py`)**:
+   - API view berbasis fungsi dengan `@api_view` dan `SessionAuthentication`, terdaftar di bawah prefix `/api/v1/` yang sama dengan Tutorial 07:
+     - `GET/POST /api/v1/education/` (`api:education-list`). Pencarian dari Tugas 5 dipindahkan ke parameter query `?institution=`.
+     - `GET/PUT/PATCH/DELETE /api/v1/education/<uuid>/` (`api:education-detail`).
+     - `POST /api/v1/education/<uuid>/star/` (`api:education-star`, *toggle*).
+   - Status HTTP yang dikembalikan: `201 Created`, `400 Bad Request`, `403 Forbidden`, `404 Not Found`, dan `204 No Content`. View hanya meneruskan permintaan; validasi ditangani serializer dan hak akses ditangani permission class.
+5. **Integrasi Halaman via REST API (`templates/education.html`, `static/js/qualifications.js`)**:
+   - Halaman Qualifications kini menampilkan, mencari (*debouncing* 300ms), menambah, memberi *star* (*Endorse*), mengubah, dan menghapus data lewat API baru tanpa *reload* halaman.
+   - Menyediakan modal *Amend qualification* untuk Editor dan Superuser yang mengirim `PATCH` berisi *field* yang berubah saja. Halaman edit Tugas 3 tetap tersedia sebagai cadangan tanpa JavaScript.
+   - Pesan kesalahan validasi (`400`) tampil di bawah *field* terkait dan lewat Toast; penolakan otorisasi (`403`) juga tampil lewat Toast.
+6. **Proteksi CSRF & Cross-Site Scripting (XSS)**:
+   - Setiap permintaan `POST`/`PATCH`/`DELETE` menyertakan *header* `X-CSRFToken`. View `show_education` memakai `@ensure_csrf_cookie` agar cookie `csrftoken` juga tersedia untuk Pengguna Biasa dan Editor.
+   - Seluruh teks dari API disisipkan ke DOM dengan `textContent`, bukan `innerHTML`, sehingga tidak pernah diparse sebagai HTML.
+7. **Pengujian Unit Otomatis (`main/tests_api.py`)**:
+   - Menambahkan class `EducationAPITest` (21 kasus uji `APITestCase`) yang mencakup setiap peran, pemeriksaan isi database pada test penolakan, validasi input, *star* (termasuk penolakan untuk pengunjung), serta test CSRF dengan `APIClient(enforce_csrf_checks=True)` dan `.login()`.
+   - Perintah `python manage.py test main` menjalankan 78 kasus uji (termasuk test Tutorial 07) dengan status `OK`.
+
+---
+
+#### Pertanyaan Reflektif
+
+1. **Jelaskan apa yang dimaksud dengan REST dan mengapa mengembalikan JSON saja belum cukup untuk menyebut sebuah API sebagai RESTful! Jelaskan pula perbedaan PUT dan PATCH beserta contoh kapan masing-masing sebaiknya digunakan!**
+   - **REST** (*Representational State Transfer*) adalah gaya arsitektur untuk API berbasis HTTP. Data dimodelkan sebagai *resource* yang punya alamat sendiri (misalnya `/api/v1/education/` untuk koleksi dan `/api/v1/education/<id>/` untuk satu data), lalu diolah dengan *method* HTTP standar: `GET` membaca, `POST` membuat, `PUT`/`PATCH` mengubah, `DELETE` menghapus. Prinsip lainnya: komunikasi *stateless* (setiap request membawa semua informasi yang dibutuhkan, termasuk identitas lewat cookie sesi atau token), respons memakai kode status HTTP yang bermakna, dan antarmukanya seragam.
+   - **Mengapa JSON saja belum cukup**: JSON hanya format datanya. Endpoint seperti `/json/education/` dan `/education/create-ajax/` di Tugas 5 memang mengembalikan JSON, tetapi aksinya tertulis di URL (`create-ajax`, `delete`), bukan di *method* HTTP, dan setiap aksi punya alamat sendiri, bukan satu *resource* yang dioperasikan dengan *method* berbeda. API baru disebut RESTful kalau struktur URL, *method*, dan status kodenya mengikuti prinsip di atas, misalnya `DELETE /api/v1/education/<id>/` yang membalas `204 No Content`.
+   - **PUT vs PATCH**: `PUT` mengganti seluruh representasi data, jadi semua field wajib dikirim; field yang tidak dikirim dianggap hilang dan DRF membalas `400`. `PATCH` hanya mengubah field yang dikirim (`partial=True` di serializer).
+     - Contoh `PUT`: halaman edit lengkap yang selalu mengirim ulang semua field (institusi, jenjang, bidang studi, periode, catatan).
+     - Contoh `PATCH`: modal *Amend qualification* di proyek ini, yang hanya mengirim field yang benar-benar diubah, misalnya `{"field_of_study": "Sistem Informasi"}`. Request lebih kecil dan tidak menimpa perubahan orang lain pada field lain.
+
+2. **Jelaskan peran serializer pada Django REST Framework! Apa keuntungannya dibandingkan merakit dictionary secara manual dengan JsonResponse seperti pada Tutorial 05?**
+   - **Peran serializer**: serializer bekerja dua arah. Saat membaca, ia mengubah objek model menjadi data Python sederhana yang siap dijadikan JSON. Saat menulis, ia memvalidasi data masuk (tipe, panjang maksimal, pilihan `degree`, ditambah aturan `validate_<field>`) lalu membuat atau memperbarui objek lewat `.save()`.
+   - **Keuntungan dibanding dictionary manual**:
+     - **Satu sumber kebenaran**: bentuk data dan aturan validasi ada di satu kelas (`EducationSerializer`) dan dipakai ulang oleh daftar, detail, create, update, dan star. Sebelumnya `show_json_education` dan `create_education_ajax` menyusun dan memvalidasi data dengan caranya masing-masing.
+     - **Validasi otomatis dari model**: `max_length`, field wajib, dan `choices` langsung terbaca dari model. Pesan error keluar dalam format standar `{field: [pesan]}` dengan status `400`.
+     - **Kontrol field yang eksplisit**: `fields` yang ditulis jelas dan `read_only` mencegah kebocoran data sensitif serta mencegah klien memalsukan field hasil perhitungan seperti `star_count`.
+     - **Dukungan PUT/PATCH**: `partial=True` langsung menangani update sebagian tanpa kode tambahan.
+     - **Browsable API**: serializer sekaligus menghasilkan form di Browsable API untuk mencoba endpoint.
+
+3. **Jelaskan perbedaan autentikasi dan otorisasi pada Django REST Framework! Mengapa hak akses harus diperiksa dengan permission class di server, bukan hanya dengan menyembunyikan tombol di template?**
+   - **Autentikasi** menjawab "siapa kamu?". Di DRF, `authentication_classes` (di proyek ini `SessionAuthentication`) membaca cookie sesi dan mengisi `request.user`; pengunjung tanpa login menjadi `AnonymousUser`.
+   - **Otorisasi** menjawab "boleh melakukan apa?". Setelah identitas diketahui, `permission_classes` (`IsPortfolioOwnerOrEditorOrReadOnly`, `IsAuthenticated`) memutuskan apakah request boleh dilanjutkan. Jika tidak, DRF membalas `403`.
+   - **Mengapa harus di server**: menyembunyikan tombol hanya mengatur tampilan. Siapa pun bisa mengirim request langsung ke API lewat DevTools, `fetch()` di console, `curl`, Postman, atau Browsable API tanpa pernah melihat tombolnya. Saat pengujian, akun pengguna biasa yang mengirim `PATCH` lewat console tetap ditolak `403` oleh permission class walaupun tidak ada tombol Edit. Pemeriksaan di server adalah satu-satunya pemeriksaan yang tidak bisa dilewati; template hanya membantu UX agar pengguna tidak melihat tombol yang pasti gagal.
+
+4. **Jelaskan mengapa permintaan yang mengubah data tetap memerlukan token CSRF ketika API memakai SessionAuthentication! Mengapa test yang memakai force_authenticate tidak cukup untuk membuktikan bahwa perlindungan CSRF berjalan?**
+   - **Mengapa tetap butuh CSRF**: dengan `SessionAuthentication`, identitas pengguna dibawa oleh cookie sesi, dan peramban otomatis mengirim cookie itu ke domain asalnya, termasuk saat request dipicu situs lain. Tanpa token CSRF, situs jahat bisa membuat peramban korban yang sedang login mengirim `DELETE /api/v1/education/<id>/` atas nama korban. Karena itu `SessionAuthentication` di DRF menjalankan pemeriksaan CSRF untuk setiap *method* yang tidak aman (`POST`, `PUT`, `PATCH`, `DELETE`). Token di header `X-CSRFToken` harus cocok dengan cookie `csrftoken`, dan situs lain tidak bisa membaca nilai tersebut.
+   - **Mengapa `force_authenticate` tidak cukup**: `force_authenticate` langsung menempelkan user ke request dan melewati kelas autentikasi, termasuk `SessionAuthentication.enforce_csrf()`. Akibatnya request tanpa token pun akan lolos di test, sehingga test tersebut tidak bisa membuktikan bahwa CSRF benar-benar dicek. Selain itu, `APIClient` biasa tidak menegakkan CSRF. Karena itu test CSRF di proyek ini memakai `APIClient(enforce_csrf_checks=True)` dan `.login()` (sesi asli lewat cookie), lalu memastikan request tanpa token ditolak `403` dan datanya tidak berubah di database, sedangkan request dengan token yang benar diterima.
+
+---
+
+#### AI Disclosure
+
+* **Tools AI yang Digunakan**: Gemini (Google AI).
+* **Link / Public Share Log Chat**: ristek.link/AI-chat-log-tugas-6
+
+##### 1. Strategi Prompting & Arsitektur Interaksi
+Proses pengerjaan Tugas 6 menerapkan metode **Iterative System-Constrained Prompting**. Pengembang menetapkan instruksi dan parameter ketat:
+* **Target Module Isolation**: Menerapkan API pada modul `Education` (bagian Tugas 3–5), bukan modul `Projects` yang sudah dipakai sebagai materi Tutorial 07, sesuai ketentuan resmi spesifikasi Tugas 6.
+* **Specification-First**: AI diminta membaca halaman soal Tugas 6 serta kode Tutorial 07 yang sudah ada (`ProjectSerializer`, `permissions.py`, `api_views.py`, `tests_api.py`) sebelum menulis kode, agar polanya konsisten.
+* **Test-Driven Verification**: Setiap perubahan diverifikasi dengan `python manage.py test main`, lalu halaman diuji di peramban untuk keempat peran (Pengunjung, Pengguna Biasa, Editor, dan Superuser).
+
+##### 2. Kronologi Log Prompting Utama
+
+| Tahap | Tujuan Prompt | Luaran AI (*Output*) | Tindakan & Evaluasi Pengembang |
+| --- | --- | --- | --- |
+| **01** | Penambahan relasi *star* pada model `Education`. | Field `stars = models.ManyToManyField(User, related_name='starred_educations')` dan migrasi `0011_education_stars`. | **Disetujui**: `related_name` dibedakan dari `starred_projects` dan `starred_experiences` agar tidak bentrok (`fields.E304`). |
+| **02** | Pembuatan serializer & validasi di `main/serializers.py`. | `EducationSerializer` dengan `fields` eksplisit, `validate_<field>()` + `strip_tags()`, dan field *read-only*. | **Disetujui**: Memastikan email/*password hash* tidak tampil dan field hasil perhitungan tidak bisa dipalsukan klien. |
+| **03** | Pembuatan API view & rute URL. | `education_list`, `education_detail`, `education_star` di `main/api_views.py` dan rute `/api/v1/education/` di `main/api_urls.py`. | **Disetujui**: Dicocokkan dengan aturan 4 peran dan daftar status HTTP pada spesifikasi. |
+| **04** | Integrasi halaman Qualifications ke REST API. | `qualifications.js` versi API, modal edit `PATCH`, Toast `400`/`403`, dan `@ensure_csrf_cookie`. | **Koreksi Manual**: Menambahkan `@ensure_csrf_cookie` karena cookie CSRF sebelumnya hanya terjamin untuk Superuser. |
+| **05** | Penulisan unit test `APITestCase`. | 21 kasus uji pada class `EducationAPITest`. | **Koreksi Manual**: Mengganti kasus uji `strip_tags()` yang salah asumsi (lihat Analisis Keterbatasan AI poin 1). |
+
+##### 3. Analisis Keterbatasan AI
+
+Dalam proses pengembangan Tugas 6, ditemukan 3 keterbatasan AI yang berhasil diidentifikasi dan dikoreksi (*Human-in-the-Loop*):
+
+1. **Asumsi Keliru tentang Perilaku `strip_tags()`**
+   - *Keterbatasan AI*: Pada draf awal unit test, AI mengasumsikan `strip_tags("<script>alert(1)</script>")` menghasilkan string kosong sehingga akan ditolak validasi.
+   - *Dampak*: Test `test_validation_rejects_bad_input` gagal (`AssertionError: 201 != 400`) karena `strip_tags()` hanya membuang tag dan menyisakan teks di dalamnya (`alert(1)`).
+   - *Perbaikan Manual*: Mengganti kasus uji dengan masukan yang benar-benar hanya berisi tag (`<img src="x" onerror="alert(1)">`). Temuan ini juga menegaskan bahwa `strip_tags()` bukan pengganti *escaping* di sisi klien, sehingga penyisipan via `textContent` tetap dipertahankan.
+
+2. **Cookie CSRF Tidak Tersedia untuk Pengguna Biasa dan Editor**
+   - *Keterbatasan AI*: Kode Tugas 5 hanya merender `{% csrf_token %}` di dalam form tambah data yang khusus Superuser. Saat fitur *star* dan *edit* dipindahkan ke `fetch()`, ketergantungan ini tidak langsung terlihat.
+   - *Dampak*: Tanpa cookie `csrftoken`, permintaan `POST`/`PATCH` dari Pengguna Biasa dan Editor berisiko ditolak `403 Forbidden` (*CSRF verification failed*).
+   - *Perbaikan Manual*: Menambahkan dekorator `@ensure_csrf_cookie` pada `show_education`, lalu membuktikannya dengan test `test_session_write_with_csrf_token_succeeds` yang memuat halaman sebagai Editor dan mengirim `PATCH` dengan token dari cookie tersebut.
+
+3. **Data Star Palsu pada Endpoint JSON Lama**
+   - *Keterbatasan AI*: View `show_json_education` dari Tugas 5 mengembalikan `total_stars: 0` dan `is_starred: False` secara *hardcoded*, karena model `Education` saat itu belum memiliki relasi *star*.
+   - *Dampak*: Endpoint lama tidak mencerminkan data sebenarnya setelah relasi `stars` ditambahkan pada Tugas 6.
+   - *Perbaikan Manual*: Mengganti nilai *hardcoded* tersebut dengan perhitungan nyata dari relasi `stars`, sehingga endpoint lama dan API baru menampilkan data yang sama.
+
+##### 4. Ringkasan Intervensi Kode Mandiri (*Code Ownership*)
+Seluruh penambahan relasi `stars` pada `Education`, pembuatan `EducationSerializer` beserta validasi `validate_<field>()`, penerapan permission class 4 peran, API view berbasis fungsi di `main/api_views.py`, rute `/api/v1/education/` di `main/api_urls.py`, integrasi halaman Qualifications (modal edit `PATCH`, Toast, *header* `X-CSRFToken`), hingga 78 kasus uji pada `python manage.py test main` telah diverifikasi, diuji, dan dipastikan berjalan stabil di lingkungan lokal.
+
+---
