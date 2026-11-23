@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.decorators import (
     api_view, authentication_classes, permission_classes,
 )
@@ -11,9 +11,15 @@ from main.models import Education, Project
 from main.permissions import IsPortfolioOwnerOrEditorOrReadOnly, IsPortfolioOwnerOrReadOnly
 from main.serializers import EducationSerializer, ProjectSerializer, qualification_index
 
+# Tutorial 10: every API view accepts a token (the Flutter app) and the session
+# cookie (the website and the Browsable API). Same order as
+# REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]: Token first, so a missing or
+# revoked token is answered with 401 instead of 403.
+API_AUTHENTICATION = [TokenAuthentication, SessionAuthentication]
+
 
 @api_view(["GET", "HEAD", "POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsPortfolioOwnerOrReadOnly])
 def project_list(request):
     if request.method in ("GET", "HEAD"):
@@ -33,7 +39,7 @@ def project_list(request):
 
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsPortfolioOwnerOrReadOnly])
 def project_detail(request, project_id):
     project = get_object_or_404(
@@ -57,7 +63,7 @@ def project_detail(request, project_id):
 
 
 @api_view(["POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsAuthenticated])
 def project_star(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
@@ -99,7 +105,7 @@ def education_response(request, education, status_code=status.HTTP_200_OK):
 
 
 @api_view(["GET", "HEAD", "POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly])
 def education_list(request):
     if request.method in ("GET", "HEAD"):
@@ -121,7 +127,7 @@ def education_list(request):
 
 
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly])
 def education_detail(request, education_id):
     education = get_object_or_404(education_queryset(), pk=education_id)
@@ -143,7 +149,7 @@ def education_detail(request, education_id):
 
 
 @api_view(["POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(API_AUTHENTICATION)
 @permission_classes([IsAuthenticated])
 def education_star(request, education_id):
     """Toggle the signed-in account's star. The account always comes from request.user."""
@@ -153,3 +159,19 @@ def education_star(request, education_id):
     else:
         education.stars.add(request.user)
     return education_response(request, education)
+
+
+# ---------------------------------------------------------------------------
+# Tutorial 10: token login and logout for the Flutter app
+#   POST /api/v1/auth/token/    username + password -> {"token": "..."}  (DRF's obtain_auth_token)
+#   POST /api/v1/auth/logout/   Authorization: Token <key>  -> 204, the token is deleted
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@authentication_classes(API_AUTHENTICATION)
+@permission_classes([IsAuthenticated])
+def api_logout(request):
+    """Revoke the caller's token. A session login has no token, so nothing is deleted."""
+    if request.auth is not None:
+        request.auth.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
